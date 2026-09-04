@@ -1,0 +1,184 @@
+# Leta — clang-tidy configuration
+# Baseline for v1: broad check families on, each exclusion justified in the table below.
+# Tighten over time by deleting exclusions, never by adding NOLINT in code without a comment.
+# Requires clang-tidy ≥ 17.
+#
+# Run locally:   clang-tidy -p build/dev src/core/tokenizer.cpp
+# Run in CI:     run-clang-tidy -p build/dev -quiet
+#
+# NOTE: YAML block scalars (the `Checks: >` below) do not support inline comments —
+# a `#` inside the block becomes part of the string and breaks clang-tidy. That's why
+# every justification lives up here instead of next to its line.
+#
+# ---------------------------------------------------------------------------
+# Families ON
+#   bugprone, cert, concurrency, cppcoreguidelines, hicpp, misc, modernize,
+#   performance, portability, readability
+#
+# Families OFF (style rules for other codebases; ours live in .clang-format + this file)
+#   google-*, llvm-*, fuchsia-*, altera-*, android-*, objc-*, zircon-*, abseil-*,
+#   boost-*, mpi-*, openmp-*, darwin-*, linuxkernel-*
+#
+# Individual exclusions and why
+#
+#   bugprone-easily-swappable-parameters
+#       Flags (int a, int b). Strong types (DocId, TermId) are the real fix per
+#       06-coding-standards.md §3 — enforced in review, not with this noisy check.
+#
+#   cppcoreguidelines-avoid-magic-numbers / readability-magic-numbers
+#       Block sizes (128), typo thresholds (5, 9), buffer sizes are legitimately inline
+#       in a search engine. Name them when they repeat; don't fight the linter.
+#
+#   cppcoreguidelines-non-private-member-variables-in-classes
+#   misc-non-private-member-variables-in-classes
+#       Plain structs with public members are DTOs and the Error type. Not a defect.
+#
+#   cppcoreguidelines-pro-bounds-array-to-pointer-decay / hicpp-no-array-decay
+#       Fires on every C-API call (simdjson, sockets, syscalls). -Wall catches the real
+#       cases; this is pure noise at the adapter boundary.
+#
+#   cppcoreguidelines-pro-bounds-pointer-arithmetic
+#       Pointer arithmetic is the whole point of a postings decoder. Confine it to core/,
+#       comment it, rely on ASan and fuzzing — don't blanket-forbid it.
+#
+#   cppcoreguidelines-pro-type-reinterpret-cast
+#       Needed for WAL/snapshot framing and SIMD. Same policy: confined, commented, fuzzed.
+#
+#   cppcoreguidelines-avoid-c-arrays / hicpp-avoid-c-arrays / modernize-avoid-c-arrays
+#       Fires on every std::span / string_view built from a C array. Wrong signal-to-noise.
+#
+#   modernize-use-trailing-return-type
+#       Not project style.
+#
+#   modernize-use-nodiscard
+#       [[nodiscard]] is applied deliberately via LETA_NODISCARD on Result-returning
+#       functions (ADR-005). Auto-suggesting it on every non-void function is noise.
+#
+#   readability-identifier-length
+#       Single-letter loop indices and short lambda params are fine. The naming rules
+#       under CheckOptions already enforce the meaningful cases.
+#
+#   readability-implicit-bool-conversion
+#       Wants every `if (ptr)` to become `if (ptr != nullptr)`. Verbose; disabled.
+#
+#   readability-function-size / hicpp-function-size
+#       Function length is enforced in review with judgement. Cognitive complexity
+#       stays ON with a strict threshold (see CheckOptions) — that's the better signal.
+#
+#   readability-else-after-return
+#       `else` after `return` is often clearer for early-exit chains.
+#
+#   misc-include-cleaner
+#       Fires on every header not yet included by a .cpp — i.e. all of them during
+#       bring-up. Re-enable once M1 lands.
+#
+#   cert-err58-cpp
+#       "Static objects may throw" — fires on every global Catch2 TEST_CASE.
+# ---------------------------------------------------------------------------
+
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  hicpp-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -misc-non-private-member-variables-in-classes,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -hicpp-no-array-decay,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-avoid-c-arrays,
+  -hicpp-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-function-size,
+  -hicpp-function-size,
+  -readability-else-after-return,
+  -misc-include-cleaner,
+  -cert-err58-cpp
+
+# Every warning is an error in CI. Locally, clangd shows them as warnings.
+WarningsAsErrors: '*'
+
+# Only lint headers that belong to us. Third-party headers under _deps/ never match.
+HeaderFilterRegex: '^(include|src|tests)/.*\.(hpp|h)$'
+
+# Formatting fixes from `-fix` use .clang-format.
+FormatStyle: file
+
+# ---------------------------------------------------------------------------
+# Naming — mirrors 06-coding-standards.md §2 exactly.
+#   types            PascalCase      Tokenizer, DocId, ErrorCode
+#   functions/vars   snake_case      posting_list, is_prefix_match
+#   private members  trailing _      postings_
+#   constants        PascalCase      MaxBatchSize
+#   enumerators      PascalCase      TokenKind::Word
+#   namespaces       lower_case      leta::core
+#   macros           LETA_UPPER      LETA_ASSERT
+#   template params  PascalCase      T, Callback
+# ---------------------------------------------------------------------------
+CheckOptions:
+  # --- naming: types ---
+  - { key: readability-identifier-naming.NamespaceCase,            value: lower_case }
+  - { key: readability-identifier-naming.ClassCase,                value: CamelCase  }
+  - { key: readability-identifier-naming.StructCase,               value: CamelCase  }
+  - { key: readability-identifier-naming.UnionCase,                value: CamelCase  }
+  - { key: readability-identifier-naming.EnumCase,                 value: CamelCase  }
+  - { key: readability-identifier-naming.EnumConstantCase,         value: CamelCase  }
+  - { key: readability-identifier-naming.ScopedEnumConstantCase,   value: CamelCase  }
+  - { key: readability-identifier-naming.TypedefCase,              value: CamelCase  }
+  - { key: readability-identifier-naming.TypeAliasCase,            value: CamelCase  }
+  - { key: readability-identifier-naming.TemplateParameterCase,    value: CamelCase  }
+  - { key: readability-identifier-naming.ConceptCase,              value: CamelCase  }
+
+  # --- naming: functions and variables ---
+  - { key: readability-identifier-naming.FunctionCase,             value: lower_case }
+  - { key: readability-identifier-naming.MethodCase,               value: lower_case }
+  - { key: readability-identifier-naming.VariableCase,             value: lower_case }
+  - { key: readability-identifier-naming.ParameterCase,            value: lower_case }
+  - { key: readability-identifier-naming.LocalVariableCase,        value: lower_case }
+  - { key: readability-identifier-naming.MemberCase,               value: lower_case }
+
+  # --- naming: member suffixes ---
+  - { key: readability-identifier-naming.PrivateMemberSuffix,      value: _          }
+  - { key: readability-identifier-naming.ProtectedMemberSuffix,    value: _          }
+  - { key: readability-identifier-naming.PublicMemberSuffix,       value: ''         }
+
+  # --- naming: constants ---
+  - { key: readability-identifier-naming.ConstexprVariableCase,    value: CamelCase  }
+  - { key: readability-identifier-naming.GlobalConstantCase,       value: CamelCase  }
+  - { key: readability-identifier-naming.StaticConstantCase,       value: CamelCase  }
+  - { key: readability-identifier-naming.ClassConstantCase,        value: CamelCase  }
+
+  # --- naming: macros ---
+  - { key: readability-identifier-naming.MacroDefinitionCase,      value: UPPER_CASE }
+  - { key: readability-identifier-naming.MacroDefinitionPrefix,    value: LETA_      }
+
+  # --- thresholds ---
+  # 15 is strict; the default 25 lets real messes through. Search algorithms (leapfrog
+  # intersection, automaton walk) may need a NOLINT with a comment explaining why —
+  # that's the intended pressure.
+  - { key: readability-function-cognitive-complexity.Threshold,    value: 15   }
+  - { key: readability-function-cognitive-complexity.IgnoreMacros, value: true }
+
+  # --- modernize ---
+  - { key: modernize-use-auto.MinTypeNameLength,                   value: 8          }
+  - { key: modernize-use-default-member-init.UseAssignment,        value: false      }
+  - { key: modernize-loop-convert.MinConfidence,                   value: reasonable }
+
+  # --- performance ---
+  - { key: performance-move-const-arg.CheckTriviallyCopyableMove,  value: false }
+  - { key: performance-unnecessary-value-param.AllowedTypes,       value: 'std::string_view;std::span' }

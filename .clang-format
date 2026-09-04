@@ -1,0 +1,135 @@
+# Leta — clang-format configuration
+# Enforced: never hand-format, never argue about it in review (docs/06-coding-standards.md §2).
+# Requires clang-format ≥ 17.
+#
+# Base: Google. Deviations are listed with the reason.
+
+Language:        Cpp
+BasedOnStyle:    Google
+Standard:        c++20
+
+# ---------------------------------------------------------------------------
+# Line width and indentation
+# Google defaults to 80 / 2; Leta uses 100 / 4 per the coding standards.
+# ---------------------------------------------------------------------------
+ColumnLimit:               100
+IndentWidth:               4
+TabWidth:                  4
+UseTab:                    Never
+ContinuationIndentWidth:   4
+AccessModifierOffset:      -4
+NamespaceIndentation:      None
+IndentCaseLabels:          true
+IndentPPDirectives:        AfterHash
+
+# ---------------------------------------------------------------------------
+# Pointers and references bind to the type: `int* p`, `const T& x`
+# Google's default derives this from the file; we want one answer.
+# ---------------------------------------------------------------------------
+DerivePointerAlignment:    false
+PointerAlignment:          Left
+ReferenceAlignment:        Left
+QualifierAlignment:        Left     # `const int` not `int const`
+
+# ---------------------------------------------------------------------------
+# Braces and short constructs
+# Attach braces (Google), but don't collapse anything onto one line except
+# empty functions — one thing per line makes diffs and breakpoints cleaner.
+# ---------------------------------------------------------------------------
+BreakBeforeBraces:                  Attach
+AllowShortFunctionsOnASingleLine:   Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine:       false
+AllowShortLambdasOnASingleLine:     Inline
+AllowShortCaseLabelsOnASingleLine:  false
+AllowShortBlocksOnASingleLine:      Never
+AllowShortEnumsOnASingleLine:       false
+InsertBraces:                       true   # always brace if/for/while bodies
+
+# ---------------------------------------------------------------------------
+# Breaking
+# ---------------------------------------------------------------------------
+BreakBeforeBinaryOperators:         NonAssignment
+BreakBeforeTernaryOperators:        true
+BreakConstructorInitializers:       BeforeComma
+BreakInheritanceList:               BeforeComma
+BreakTemplateDeclarations:          Yes
+AlwaysBreakAfterReturnType:         None
+BinPackArguments:                   false
+BinPackParameters:                  false
+AllowAllArgumentsOnNextLine:        false
+AllowAllParametersOfDeclarationOnNextLine: false
+PackConstructorInitializers:        Never
+Cpp11BracedListStyle:               true
+
+# ---------------------------------------------------------------------------
+# Alignment — keep it modest; aggressive alignment creates noisy diffs
+# ---------------------------------------------------------------------------
+AlignAfterOpenBracket:              Align
+AlignConsecutiveAssignments:        None
+AlignConsecutiveDeclarations:       None
+AlignConsecutiveMacros:             Consecutive
+AlignEscapedNewlines:               Left
+AlignOperands:                      Align
+AlignTrailingComments:
+  Kind:           Always
+  OverEmptyLines: 0
+
+# ---------------------------------------------------------------------------
+# Includes — order per 06-coding-standards.md §2:
+#   1. the file's own header (handled by IncludeIsMainRegex)
+#   2. project headers      <leta/...> or "leta/..."
+#   3. C++ standard library <vector>
+#   4. C standard headers   <cstdint>
+#   5. third party          <simdjson.h>, <catch2/...>
+# ---------------------------------------------------------------------------
+SortIncludes:                       CaseSensitive
+IncludeBlocks:                      Regroup
+IncludeIsMainRegex:                 '([-_](test|unittest|bench))?$'
+IncludeCategories:
+  - Regex:           '^["<]leta/'
+    Priority:        1
+    SortPriority:    1
+  - Regex:           '^<c[a-z]+>$'          # <cstdint>, <cstring>, ...
+    Priority:        3
+    SortPriority:    3
+  - Regex:           '^<[a-z_]+>$'          # <vector>, <string_view>, ...
+    Priority:        2
+    SortPriority:    2
+  - Regex:           '^<.*\.(h|hpp)>$'      # third-party angle includes
+    Priority:        4
+    SortPriority:    4
+  - Regex:           '^<.*>$'               # anything else in angle brackets
+    Priority:        4
+    SortPriority:    5
+  - Regex:           '.*'                   # quoted local includes
+    Priority:        5
+    SortPriority:    6
+
+# ---------------------------------------------------------------------------
+# Namespaces, comments, misc
+# ---------------------------------------------------------------------------
+FixNamespaceComments:               true
+ShortNamespaceLines:                0       # always add `}  // namespace x`
+CompactNamespaces:                  false
+ReflowComments:                     true
+SpacesBeforeTrailingComments:       2
+SpaceAfterTemplateKeyword:          true
+SpaceBeforeCpp11BracedList:         false
+SpaceBeforeRangeBasedForLoopColon:  true
+SpacesInContainerLiterals:          false
+RemoveSemicolon:                    true    # after `}` of functions
+InsertNewlineAtEOF:                 true
+KeepEmptyLinesAtTheStartOfBlocks:   false
+MaxEmptyLinesToKeep:                1
+SeparateDefinitionBlocks:           Always
+EmptyLineBeforeAccessModifier:      Always
+EmptyLineAfterAccessModifier:       Never
+
+# Attribute-style macros the formatter should treat as attributes, not calls
+AttributeMacros:
+  - LETA_NODISCARD
+  - LETA_UNUSED
+StatementMacros:
+  - LETA_ASSERT
+  - LETA_CHECK

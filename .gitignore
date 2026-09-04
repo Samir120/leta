@@ -1,9 +1,11 @@
 # ---------------------------------------------------------------------------
 # Build output — CMake + Ninja
+# `build/` unanchored on purpose: the presets write to build/<preset>/ at the root,
+# and any nested build/ is also junk.
 # ---------------------------------------------------------------------------
 build/
 build-*/
-out/
+/out/
 _deps/
 CMakeCache.txt
 CMakeFiles/
@@ -14,16 +16,23 @@ install_manifest.txt
 Testing/
 
 # ---------------------------------------------------------------------------
-# VS Code
+# Working files that stay out of the public repository
+# STATE.md and PROJECT_INSTRUCTIONS.md live in the Claude Project, not here.
+# If a local copy is kept for reference, it is never committed.
 # ---------------------------------------------------------------------------
-# We commit a shared .vscode/ (see .gitattributes) so contributors get sensible
-# defaults, but not personal state and not the CMake Tools cache.
+/STATE.md
+/PROJECT_INSTRUCTIONS.md
+
+# ---------------------------------------------------------------------------
+# VS Code
+# The shared workspace files are committed so contributors get the same
+# clangd / CMake Tools defaults. Everything else under .vscode/ is personal.
+# ---------------------------------------------------------------------------
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 !.vscode/tasks.json
 !.vscode/launch.json
-!.vscode/c_cpp_properties.json
 .vscode-server/
 
 # Editor scratch that sometimes sneaks in from other tools
@@ -38,8 +47,6 @@ Testing/
 
 # ---------------------------------------------------------------------------
 # Sanitizer, fuzzer and coverage artefacts
-# Regression cases for the fuzzers live under tests/fuzz/corpus/ and ARE tracked;
-# transient crash files at the repo root are not.
 # ---------------------------------------------------------------------------
 *.gcda
 *.gcno
@@ -51,18 +58,23 @@ callgrind.out.*
 perf.data
 perf.data.old
 
+# libFuzzer writes these into the working directory when it finds something.
+# Those are transient. The SAME files, once copied into tests/fuzz/corpus/ as a
+# regression case, ARE tracked — hence the re-include below.
 crash-*
 leak-*
 oom-*
 timeout-*
 fuzz-*.log
+!tests/fuzz/corpus/**
 
 # ---------------------------------------------------------------------------
 # Runtime data written by a local dev server
+# Anchored to the repo root. An unanchored `data/` would also swallow
+# tests/data/, which holds committed benchmark and relevance datasets.
+# WAL and snapshot fixtures under tests/ are deliberately NOT excluded.
 # ---------------------------------------------------------------------------
-data/
-*.wal
-*.snap
+/data/
 
 # ---------------------------------------------------------------------------
 # Secrets and local overrides

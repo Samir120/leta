@@ -8,6 +8,7 @@
 # ---------------------------------------------------------------------------
 *.cpp        text diff=cpp
 *.hpp        text diff=cpp
+*.ipp        text diff=cpp
 *.c          text diff=cpp
 *.h          text diff=cpp
 *.cmake      text
@@ -19,6 +20,11 @@ CMakeLists.txt text
 *.sh         text eol=lf
 Dockerfile   text
 *.dockerfile text
+
+# Dotfile configs that linguist would otherwise not classify
+.clang-format linguist-language=YAML
+.clang-tidy   linguist-language=YAML
+.editorconfig linguist-language=EditorConfig
 
 # ---------------------------------------------------------------------------
 # Binary — never diff, never merge
@@ -34,14 +40,20 @@ Dockerfile   text
 *.tgz        binary
 *.zip        binary
 
-# Fuzz corpora and benchmark datasets are opaque bytes.
-tests/fuzz/corpus/** binary
-tests/data/**        binary
+# Fuzz corpora are opaque bytes, whatever their extension.
+tests/fuzz/corpus/**            binary
+tests/fuzz/corpus/**/*.md       text diff
+
+# Benchmark datasets: keep them text (LF-normalised, mergeable) but suppress
+# diffs so a regenerated 100k-line JSONL file doesn't produce a 100k-line diff.
+tests/data/**                   -diff
+tests/data/**/*.md              diff
+tests/data/**/*.py              diff
+tests/data/**/*.sh              diff
 
 # ---------------------------------------------------------------------------
 # GitHub linguist — keep the language breakdown honest
-#   linguist-vendored:  fetched dependencies won't be counted as your code
-#   linguist-generated: hides file from diffs by default and excludes from stats
+#   linguist-vendored:      fetched dependencies won't be counted as your code
 #   linguist-documentation: docs won't dominate the language bar
 # ---------------------------------------------------------------------------
 _deps/**            linguist-vendored
@@ -55,6 +67,7 @@ docs/02-api-spec.yaml -linguist-documentation
 # Export — files that don't belong in `git archive` tarballs (release ZIPs)
 # ---------------------------------------------------------------------------
 .github/         export-ignore
+.vscode/         export-ignore
 .gitattributes   export-ignore
 .gitignore       export-ignore
 .editorconfig    export-ignore

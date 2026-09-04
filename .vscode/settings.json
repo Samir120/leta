@@ -1,0 +1,75 @@
+{
+  // ---------------------------------------------------------------------------
+  // Leta — shared VS Code workspace settings. Committed. Personal preferences go
+  // in your user settings, not here.
+  // ---------------------------------------------------------------------------
+
+  // --- editor: mirrors .editorconfig, plus the 100-column ruler from .clang-format
+  "editor.rulers": [100],
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.eol": "\n",
+  "[markdown]": {
+    "files.trimTrailingWhitespace": false
+  },
+
+  // --- C++: clangd is the language server; it reads .clang-format and .clang-tidy itself
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "[c]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "clangd.arguments": [
+    "--compile-commands-dir=build/dev",
+    "--clang-tidy",
+    "--background-index",
+    "--header-insertion=never",
+    "--completion-style=detailed",
+    "--function-arg-placeholders=false",
+    "--query-driver=/usr/bin/g++*,/usr/bin/clang++*,/usr/lib/llvm-*/bin/clang++"
+  ],
+  // If ms-vscode.cpptools is installed for its debugger, keep its IntelliSense off so
+  // clangd is the only source of diagnostics. Two engines = duplicate squiggles.
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "C_Cpp.autocomplete": "disabled",
+  "C_Cpp.errorSquiggles": "disabled",
+
+  // --- CMake Tools: presets are the only configure path (CMakePresets.json, M0-T3)
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": false,
+  "cmake.configureOnEdit": false,
+  "cmake.options.statusBarVisibility": "visible",
+  "cmake.showOptionsMovedNotification": false,
+
+  // --- file handling
+  "files.associations": {
+    "*.hpp": "cpp",
+    "*.ipp": "cpp",
+    ".clang-format": "yaml",
+    ".clang-tidy": "yaml",
+    "CMakePresets.json": "jsonc",
+    "CMakeUserPresets.json": "jsonc"
+  },
+  "files.exclude": {
+    "**/.git": true
+  },
+  "files.watcherExclude": {
+    "**/build/**": true,
+    "**/_deps/**": true
+  },
+  "search.exclude": {
+    "**/build": true,
+    "**/_deps": true,
+    "**/tests/data": true,
+    "**/tests/fuzz/corpus": true
+  },
+
+  // --- git
+  "git.autofetch": true,
+  "git.enableSmartCommit": false,
+  "git.inputValidationLength": 72,
+  "git.inputValidationSubjectLength": 72
+}
