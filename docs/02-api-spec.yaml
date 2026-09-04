@@ -1,0 +1,512 @@
+openapi: 3.1.0
+info:
+  title: Leta Search API
+  version: 1.0.0-draft.1
+  summary: Self-hosted typo-tolerant product search.
+  description: |
+    JSON over HTTP. All routes except `/health` require `Authorization: Bearer <master key>`
+    when `LETA_MASTER_KEY` is set. Every response carries `X-Request-Id`.
+    Errors use the `Error` schema. Unknown fields and parameters are rejected (400).
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:7700
+
+security:
+  - masterKey: []
+
+tags:
+  - name: system
+  - name: indexes
+  - name: documents
+  - name: search
+  - name: settings
+
+paths:
+  /health:
+    get:
+      tags: [system]
+      security: []
+      summary: Liveness/readiness
+      responses:
+        "200":
+          description: Ready to serve queries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [available] }
+        "503":
+          description: Starting up (restoring from disk)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [starting] }
+
+  /version:
+    get:
+      tags: [system]
+      summary: Build information
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version, commit]
+                properties:
+                  version: { type: string, example: "1.0.0" }
+                  commit: { type: string, example: "a1b2c3d" }
+                  buildType: { type: string, example: "Release" }
+                  compiler: { type: string, example: "clang 18.1.0" }
+
+  /stats:
+    get:
+      tags: [system]
+      summary: Server-wide statistics
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  databaseSizeBytes: { type: integer }
+                  lastSnapshot: { type: [string, "null"], format: date-time }
+                  indexes:
+                    type: object
+                    additionalProperties:
+                      $ref: "#/components/schemas/IndexStats"
+
+  /metrics:
+    get:
+      tags: [system]
+      summary: Prometheus metrics
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain: {}
+
+  /snapshots:
+    post:
+      tags: [system]
+      summary: Force a snapshot of all indexes now
+      responses:
+        "202":
+          description: Snapshot started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  started: { type: boolean }
+
+  /indexes:
+    get:
+      tags: [indexes]
+      summary: List indexes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: { $ref: "#/components/schemas/Index" }
+    post:
+      tags: [indexes]
+      summary: Create an index
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [uid]
+              properties:
+                uid: { $ref: "#/components/schemas/IndexUid" }
+                primaryKey: { type: [string, "null"] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Index" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409":
+          description: Index already exists
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /indexes/{uid}:
+    parameters:
+      - $ref: "#/components/parameters/uid"
+    get:
+      tags: [indexes]
+      summary: Get an index
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Index" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [indexes]
+      summary: Delete an index and all its documents
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /indexes/{uid}/stats:
+    parameters:
+      - $ref: "#/components/parameters/uid"
+    get:
+      tags: [indexes]
+      summary: Index statistics
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IndexStats" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /indexes/{uid}/documents:
+    parameters:
+      - $ref: "#/components/parameters/uid"
+    post:
+      tags: [documents]
+      summary: Add or replace documents
+      description: |
+        Array of JSON objects. A document whose primary key already exists is replaced entirely.
+        Synchronous: returns after the batch is indexed and logged. Creates the index if it does
+        not exist (primary key inferred from the first document).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 10000
+              items: { type: object }
+      responses:
+        "200":
+          description: Indexed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IngestResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "413":
+          description: Body exceeds the configured limit (default 20 MB)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    put:
+      tags: [documents]
+      summary: Partially update documents (merge fields)
+      description: Fields present in each object are merged into the stored document. FR-15 (Should).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 10000
+              items: { type: object }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IngestResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    delete:
+      tags: [documents]
+      summary: Delete all documents in the index
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: integer }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /indexes/{uid}/documents/{docId}:
+    parameters:
+      - $ref: "#/components/parameters/uid"
+      - name: docId
+        in: path
+        required: true
+        schema: { type: string }
+        description: Primary key value (string or integer, as text)
+    get:
+      tags: [documents]
+      summary: Get one document
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [documents]
+      summary: Delete one document
+      responses:
+        "204": { description: Deleted (or did not exist) }
+        "404":
+          description: Index not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /indexes/{uid}/search:
+    parameters:
+      - $ref: "#/components/parameters/uid"
+    post:
+      tags: [search]
+      summary: Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SearchRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    get:
+      tags: [search]
+      summary: Search (query string form, same semantics)
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 20 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 10000, default: 0 } }
+        - { name: attributesToRetrieve, in: query, schema: { type: string }, description: Comma-separated }
+        - { name: attributesToHighlight, in: query, schema: { type: string }, description: Comma-separated }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResponse" }
+
+  /indexes/{uid}/settings:
+    parameters:
+      - $ref: "#/components/parameters/uid"
+    get:
+      tags: [settings]
+      summary: Get settings
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+    patch:
+      tags: [settings]
+      summary: Update settings (partial)
+      description: |
+        Only supplied keys change. Changing `searchableAttributes`, `typoTolerance.disableOnWords`,
+        `typoTolerance.disableOnAttributes` or `language` triggers a synchronous reindex (FR-44).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Settings" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    delete:
+      tags: [settings]
+      summary: Reset settings to defaults
+      responses:
+        "200":
+          description: Reset
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+
+components:
+  securitySchemes:
+    masterKey:
+      type: http
+      scheme: bearer
+
+  parameters:
+    uid:
+      name: uid
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/IndexUid" }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    IndexUid:
+      type: string
+      pattern: "^[a-zA-Z0-9_-]{1,64}$"
+      example: products
+
+    Index:
+      type: object
+      required: [uid, primaryKey, createdAt, updatedAt]
+      properties:
+        uid: { $ref: "#/components/schemas/IndexUid" }
+        primaryKey: { type: [string, "null"], example: id }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    IndexStats:
+      type: object
+      properties:
+        numberOfDocuments: { type: integer }
+        isIndexing: { type: boolean }
+        memoryBytes: { type: integer }
+        lastSnapshot: { type: [string, "null"], format: date-time }
+
+    IngestResult:
+      type: object
+      required: [received, indexed, processingTimeMs]
+      properties:
+        received: { type: integer }
+        indexed: { type: integer }
+        replaced: { type: integer }
+        primaryKey: { type: string }
+        processingTimeMs: { type: number }
+
+    SearchRequest:
+      type: object
+      properties:
+        q: { type: string, default: "", example: "corsiar ddr5 6000" }
+        limit: { type: integer, minimum: 1, maximum: 1000, default: 20 }
+        offset: { type: integer, minimum: 0, maximum: 10000, default: 0 }
+        attributesToRetrieve:
+          type: array
+          items: { type: string }
+          default: ["*"]
+        attributesToHighlight:
+          type: array
+          items: { type: string }
+          default: []
+        highlightPreTag: { type: string, default: "<em>" }
+        highlightPostTag: { type: string, default: "</em>" }
+        # Reserved for v2 (rejected with 400 in v1): filter, facets, sort
+
+    SearchResponse:
+      type: object
+      required: [hits, query, limit, offset, estimatedTotalHits, processingTimeMs]
+      properties:
+        hits:
+          type: array
+          items:
+            type: object
+            description: The document (per attributesToRetrieve), plus `_formatted` when highlighting is requested.
+        query: { type: string }
+        limit: { type: integer }
+        offset: { type: integer }
+        estimatedTotalHits: { type: integer }
+        processingTimeMs: { type: number }
+      example:
+        hits:
+          - id: 4471
+            name: "Corsair Vengeance DDR5 32GB (2x16) 6000MHz CL30"
+            brand: Corsair
+            price: 1290
+            _formatted:
+              name: "<em>Corsair</em> Vengeance <em>DDR5</em> 32GB (2x16) <em>6000</em>MHz CL30"
+        query: "corsiar ddr5 6000"
+        limit: 20
+        offset: 0
+        estimatedTotalHits: 3
+        processingTimeMs: 1.4
+
+    Settings:
+      type: object
+      properties:
+        searchableAttributes:
+          type: array
+          items: { type: string }
+          default: ["*"]
+          description: Ordered; earlier attributes rank higher.
+        displayedAttributes:
+          type: array
+          items: { type: string }
+          default: ["*"]
+        typoTolerance:
+          type: object
+          properties:
+            enabled: { type: boolean, default: true }
+            minWordSizeForTypos:
+              type: object
+              properties:
+                oneTypo: { type: integer, default: 5 }
+                twoTypos: { type: integer, default: 9 }
+            disableOnWords:
+              type: array
+              items: { type: string }
+              default: []
+            disableOnAttributes:
+              type: array
+              items: { type: string }
+              default: []
+        language:
+          type: object
+          properties:
+            foldDiacritics: { type: boolean, default: true }
+        filterableAttributes:
+          type: array
+          items: { type: string }
+          default: []
+          description: Reserved for v2; accepted and stored, no effect in v1.
+        sortableAttributes:
+          type: array
+          items: { type: string }
+          default: []
+          description: Reserved for v2; accepted and stored, no effect in v1.
+
+    Error:
+      type: object
+      required: [code, message, type]
+      properties:
+        code: { type: string, example: index_not_found }
+        message: { type: string, example: "Index `products` not found." }
+        type:
+          type: string
+          enum: [invalid_request, auth, not_found, internal]

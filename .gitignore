@@ -1,0 +1,82 @@
+# ---------------------------------------------------------------------------
+# Build output — CMake + Ninja
+# ---------------------------------------------------------------------------
+build/
+build-*/
+out/
+_deps/
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+compile_commands.json
+install_manifest.txt
+Testing/
+
+# ---------------------------------------------------------------------------
+# VS Code
+# ---------------------------------------------------------------------------
+# We commit a shared .vscode/ (see .gitattributes) so contributors get sensible
+# defaults, but not personal state and not the CMake Tools cache.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/c_cpp_properties.json
+.vscode-server/
+
+# Editor scratch that sometimes sneaks in from other tools
+.idea/
+.cache/
+.ccls-cache/
+.clangd/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ---------------------------------------------------------------------------
+# Sanitizer, fuzzer and coverage artefacts
+# Regression cases for the fuzzers live under tests/fuzz/corpus/ and ARE tracked;
+# transient crash files at the repo root are not.
+# ---------------------------------------------------------------------------
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+coverage/
+lcov.info
+callgrind.out.*
+perf.data
+perf.data.old
+
+crash-*
+leak-*
+oom-*
+timeout-*
+fuzz-*.log
+
+# ---------------------------------------------------------------------------
+# Runtime data written by a local dev server
+# ---------------------------------------------------------------------------
+data/
+*.wal
+*.snap
+
+# ---------------------------------------------------------------------------
+# Secrets and local overrides
+# .env.example IS committed as documentation
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---------------------------------------------------------------------------
+# Package manager caches Leta doesn't use itself, but that neighbours often do
+# ---------------------------------------------------------------------------
+node_modules/
+__pycache__/
+*.pyc

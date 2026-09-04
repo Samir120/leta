@@ -1,0 +1,66 @@
+# EditorConfig — https://editorconfig.org
+# Enforces the mechanical bits across editors so nobody argues about tabs vs spaces.
+# C++ formatting proper is handled by .clang-format; this file covers everything else.
+
+root = true
+
+# ---------------------------------------------------------------------------
+# Defaults for every file
+# ---------------------------------------------------------------------------
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# ---------------------------------------------------------------------------
+# C and C++ — 4-space indent, 100-column soft cap
+# (100 columns is enforced by .clang-format ColumnLimit)
+# ---------------------------------------------------------------------------
+[*.{cpp,hpp,c,h,cc,cxx,hh,hxx,ipp,tpp}]
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+# ---------------------------------------------------------------------------
+# CMake — 2 spaces is convention
+# ---------------------------------------------------------------------------
+[{CMakeLists.txt,*.cmake}]
+indent_style = space
+indent_size = 2
+
+# ---------------------------------------------------------------------------
+# YAML, JSON — 2 spaces (JSON is intolerant of trailing whitespace anyway)
+# ---------------------------------------------------------------------------
+[*.{yml,yaml,json}]
+indent_style = space
+indent_size = 2
+
+# ---------------------------------------------------------------------------
+# Shell scripts — 2 spaces, LF (shell is line-ending-sensitive on execution)
+# ---------------------------------------------------------------------------
+[*.sh]
+indent_style = space
+indent_size = 2
+
+# ---------------------------------------------------------------------------
+# Python — 4 spaces (only used for scripts/, if any)
+# ---------------------------------------------------------------------------
+[*.py]
+indent_style = space
+indent_size = 4
+
+# ---------------------------------------------------------------------------
+# Makefiles — TABS ARE MANDATORY, do not touch
+# ---------------------------------------------------------------------------
+[Makefile]
+indent_style = tab
+
+# ---------------------------------------------------------------------------
+# Markdown — trailing whitespace is meaningful (two spaces = hard line break)
+# ---------------------------------------------------------------------------
+[*.md]
+trim_trailing_whitespace = false
+indent_size = 2
