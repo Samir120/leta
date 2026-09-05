@@ -8,8 +8,8 @@
 
 ## Context
 
-The build must work on GCC 13 and Clang 17, on x86-64 and arm64, on Linux and under WSL2 on Windows
-11 (NFR-09, and the brief's §7 development environment). S6 requires a stranger to run Leta in under
+The build must work on GCC 13 and Clang 17, on x86-64 and arm64, on Linux (NFR-09; the brief's §7
+makes Linux the only development environment). S6 requires a stranger to run Leta in under
 ten minutes. The container image must stay under 30 MB (NFR-13). The dependency count is small —
 roughly six libraries.
 

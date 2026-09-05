@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Status | Draft v0.1 |
+| Status | Draft v0.2 |
 | Owner | Samir (SwadeStack agency) |
-| Last updated | 2026-09-03 |
+| Last updated | 2026-09-05 |
 
 ## 1. What Leta is
 
@@ -45,7 +45,7 @@ These are deliberately excluded from v1. Each may become a later milestone, but 
 - Vector / semantic / hybrid search.
 - Admin web UI.
 - Being a primary datastore. Leta may lose its index; the source of truth is always elsewhere.
-- Windows-native binary as a supported deployment target. Leta ships as a Linux container image; Windows hosts run it via a Linux container runtime (see `03-architecture.md`, ADR-002).
+- Windows-native binary as a supported deployment target. Leta ships as a Linux container image; Windows hosts run it via a Linux container runtime (see `03-architecture.md`, ADR-010).
 
 ## 5. Users
 
@@ -70,7 +70,7 @@ v1 is done when all of the following are true:
 
 - Single developer, evenings and weekends; the roadmap assumes roughly 6–10 hours per week.
 - Implementation is executed by an AI coding agent against milestone specifications; design and acceptance decisions stay with the owner.
-- Development on Windows 11 (Docker Desktop / WSL2) and Linux; production on a Windows Server host with a Linux container runtime.
+- Development on Linux only; no Windows or macOS development environment is supported. Production on a Windows Server host with a Linux container runtime.
 - Swedish and English catalog text; diacritics must fold for matching (`skarm` matches `skärm`).
 - Apache-2.0 licence, public repository from the first commit.
 

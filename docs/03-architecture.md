@@ -313,7 +313,4 @@ writes a final snapshot if cheap, and exits within 10 s (FR-66).
 | ADR-007 | Single writer, immutable segments, snapshot swap | Proposed |
 | ADR-008 | Sorted term dictionary + block-compressed postings | Proposed |
 | ADR-009 | WAL framing and snapshot format | Proposed |
-
-> The brief's §4 refers to an "ADR-002" about Windows deployment. That predates this numbering.
-> Either renumber the reference in the brief or add the Windows deployment decision as ADR-010; it
-> is listed as Q6 in `STATE.md`.
+| ADR-010 | Linux container as the only deployment artifact | Proposed |

@@ -9,9 +9,9 @@
 
 ## Context
 
-The brief's §7 states the environment plainly: development on Windows 11 with Docker Desktop and
-WSL2, and on Linux; production on a Windows Server host running a Linux container runtime. §4 already
-declares a Windows-native binary a non-goal.
+The brief's §7 states the environment plainly: development on Linux only; production on a Windows
+Server host running a Linux container runtime. §4 already declares a Windows-native binary a
+non-goal.
 
 FR-67 requires a multi-arch OCI image with a non-root user, a declared volume, and a `HEALTHCHECK`.
 NFR-13 caps the image at 30 MB. S6 requires a stranger to be running Leta within ten minutes using
@@ -57,4 +57,4 @@ prerequisite in the README rather than an unstated assumption.
 
 The brief §4 forward-references "ADR-002" for this decision, written before the ADR sequence existed.
 ADR-002 is now the build-system decision. Per `07-ways-of-working.md` §5 ADR numbers are never
-reused or renumbered, so **the brief should be corrected to point at ADR-010**. Tracked as Q6.
+reused or renumbered, so the brief was corrected to point at ADR-010 (2026-09-05, closing Q6).
