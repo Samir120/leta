@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed |
+| Status | **Accepted** — 2026-09-05 |
 | Date | 2026-09-03 |
 | Requirements | FR-67, NFR-08, NFR-09, NFR-10, NFR-13, S6 |
 | Note | This is the decision the brief §4 refers to as "ADR-002". See §Numbering below. |

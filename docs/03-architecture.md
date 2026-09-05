@@ -313,4 +313,4 @@ writes a final snapshot if cheap, and exits within 10 s (FR-66).
 | ADR-007 | Single writer, immutable segments, snapshot swap | Proposed |
 | ADR-008 | Sorted term dictionary + block-compressed postings | Proposed |
 | ADR-009 | WAL framing and snapshot format | Proposed |
-| ADR-010 | Linux container as the only deployment artifact | Proposed |
+| ADR-010 | Linux container as the only deployment artifact | **Accepted** 2026-09-05 |
