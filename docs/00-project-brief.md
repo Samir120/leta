@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Status | Draft v0.2 |
+| Status | Draft v0.3 |
 | Owner | Samir (SwadeStack agency) |
-| Last updated | 2026-09-05 |
+| Last updated | 2026-09-06 |
 
 ## 1. What Leta is
 
@@ -70,7 +70,8 @@ v1 is done when all of the following are true:
 
 - Single developer, evenings and weekends; the roadmap assumes roughly 6–10 hours per week.
 - Implementation is executed by an AI coding agent against milestone specifications; design and acceptance decisions stay with the owner.
-- Development on Linux only; no Windows or macOS development environment is supported. Production on a Windows Server host with a Linux container runtime.
+- Development on Linux only; no Windows or macOS development environment is supported.
+- Production: Leta runs co-located with the SwadeStack backend and PostgreSQL, on the host they already share, through that host's Linux container runtime (ADR-010). It shares CPU with both; the S2 benchmark host is dedicated, so production p99 is expected to sit somewhat above the published number.
 - Swedish and English catalog text; diacritics must fold for matching (`skarm` matches `skärm`).
 - Apache-2.0 licence, public repository from the first commit.
 

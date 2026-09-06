@@ -2,9 +2,10 @@
 
 | | |
 |---|---|
-| Status | Proposed |
+| Status | Accepted |
 | Date | 2026-09-03 |
-| Requirements | FR-21, FR-22, FR-23, FR-26, NFR-01, NFR-04 |
+| Accepted | 2026-09-06 |
+| Requirements | FR-21, FR-22, FR-23, FR-26, FR-63, NFR-01, NFR-04 |
 
 ## Context
 
@@ -68,9 +69,12 @@ naive oracle available for property testing.
 - Positions inflate postings memory, which is the second-largest contributor to NFR-04 after raw
   document storage.
 
-**Mitigation, specified now:** cap candidates per term, ordered by edit distance ascending then
-document frequency descending. The cap is a per-index setting with a documented default. Capping
-makes `estimatedTotalHits` an estimate, which is why FR-28 names it that.
+**Mitigation, specified now:** cap candidates per query term, ordered by edit distance ascending then
+document frequency descending. The cap is a **server-level configuration value**
+(`LETA_MAX_CANDIDATES_PER_TERM`, FR-63) with a documented default; it is deliberately not a field in
+the `Settings` schema of `02-api-spec.yaml`, so the contract is untouched, and a per-index override
+is deferred until a user needs one. Capping makes `estimatedTotalHits` an estimate, which is why
+FR-28 names it that.
 
 ## Revisit when
 

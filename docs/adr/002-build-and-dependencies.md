@@ -2,8 +2,9 @@
 
 | | |
 |---|---|
-| Status | Proposed |
+| Status | Accepted |
 | Date | 2026-09-03 |
+| Accepted | 2026-09-06 |
 | Requirements | NFR-09, NFR-13, S6 |
 
 ## Context
@@ -47,8 +48,15 @@ reviewable in one file.
 and a CI cache keyed on the dependency manifest. A dependency with a bad CMake export requires a
 local patch.
 
+No mainstream dependency bot parses CPM pins, so Dependabot cannot track them (it still covers
+GitHub Actions versions). Dependency updates are a manual review, recorded in `STATE.md`, at each
+release checkpoint. If the dependency count grows beyond a handful, add a CI job that diffs pinned
+tags against upstream releases and opens an issue.
+
 **Follow-up:** M0 sets up presets, CPM, ccache in CI, and the `leta_core` no-dependency check from
-ADR-001.
+ADR-001. The M0-T3 spec fixes the canonical preset and workflow names; `README.md`,
+`CONTRIBUTING.md`, `04-roadmap.md` and `STATE.md` follow it. `SECURITY.md` and `CONTRIBUTING.md`
+currently say Dependabot covers dependency vulnerabilities; correct that wording at M0-T5.
 
 ## Revisit when
 

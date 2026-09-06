@@ -2,9 +2,10 @@
 
 | | |
 |---|---|
-| Status | Proposed |
+| Status | Accepted |
 | Date | 2026-09-03 |
-| Requirements | NFR-01, NFR-11, NFR-12, NFR-13, R2 |
+| Accepted | 2026-09-06 |
+| Requirements | NFR-01, NFR-11, NFR-12, NFR-13, FR-63; risk R2 in `STATE.md` |
 
 ## Context
 
@@ -16,8 +17,14 @@ and ranking as the from-scratch work — HTTP is not on that list.
 
 ## Decision
 
-Use **cpp-httplib** (header-only, thread-per-connection) for v1, behind a project-owned `HttpServer`
-port interface in `application`. Handlers never see a cpp-httplib type.
+Use **cpp-httplib** (header-only; one listener thread dispatching accepted sockets to a fixed pool of
+blocking worker threads) for v1, behind a project-owned `HttpServer` port interface in `application`.
+Handlers never see a cpp-httplib type.
+
+The worker pool is sized to **connections, not cores.** `worker_threads` (FR-63) defaults to **64**.
+A keep-alive connection occupies a pool thread until it closes, and Node's HTTP agent keeps
+connections alive by default; a pool of `hardware_concurrency` threads on the 4-vCPU NFR-01 host
+would serialize 46 of the 50 concurrent clients behind 4 threads and blow the p99 by construction.
 
 Enforce NFR-12 through the library's payload limit (20 MB) and read/write timeouts (30 s).
 
@@ -25,9 +32,9 @@ Enforce NFR-12 through the library's payload limit (20 MB) and read/write timeou
 
 **A — Hand-rolled epoll or io_uring loop.** The most interesting option and the best learning value.
 Rejected for v1 on scheduling grounds: it is a milestone-sized project on its own, and at 50
-concurrent connections it buys nothing measurable. Thread-per-connection at that concurrency costs
-about 50 stacks and no meaningful scheduler pressure. The port interface keeps this available as a
-post-v1 milestone, where it becomes a genuine, benchmark-justified improvement rather than
+concurrent connections it buys nothing measurable. A pool of 64 blocking threads at that concurrency
+costs about 64 stacks and no meaningful scheduler pressure. The port interface keeps this available
+as a post-v1 milestone, where it becomes a genuine, benchmark-justified improvement rather than
 speculative work.
 
 **B — Boost.Beast.** Correct and fast, but pulls in a large dependency that threatens NFR-13, and
@@ -40,12 +47,19 @@ inverts control over the layering in ADR-001.
 
 **Easier:** the HTTP milestone is days, not weeks. One header, no build complications on arm64.
 
-**Harder:** thread-per-connection will not scale to thousands of connections, and the library gives
+**Harder:** a fixed blocking pool will not scale to thousands of connections, and the library gives
 limited control over buffer reuse — so the HTTP layer will likely be the first bottleneck when
 benchmarks run in M11. That is acceptable if measured; it is not acceptable if assumed.
 
-**Follow-up:** M11 must attribute latency between the HTTP layer and the search path, so the budget
-in `03-architecture.md` §5 can be validated per stage rather than end to end.
+The pool-plus-keep-alive interaction is a footgun: any deployment with more concurrent keep-alive
+connections than pool threads degrades sharply rather than gracefully. `worker_threads` is documented
+prominently in the README's operations section, and `/metrics` exposes the number of connections
+waiting for a worker so the condition is visible.
+
+**Follow-up:** M1 sets the pool size explicitly through the port and verifies the pinned version's
+default task-queue behaviour against the description above — this ADR describes the library as
+understood at the time of writing, not as measured. M11 attributes latency between the HTTP layer
+and the search path, so the budget in `03-architecture.md` §5 can be validated per stage.
 
 ## Revisit when
 

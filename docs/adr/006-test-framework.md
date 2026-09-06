@@ -2,8 +2,9 @@
 
 | | |
 |---|---|
-| Status | Proposed |
+| Status | Accepted |
 | Date | 2026-09-03 |
+| Accepted | 2026-09-06 |
 | Requirements | NFR-14, and §3 of `01-requirements.md` |
 
 ## Context

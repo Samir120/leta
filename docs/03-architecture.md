@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| Status | Draft v0.1 — **proposed, awaiting owner acceptance** |
+| Status | v1 — describes ADRs 001–010, all Accepted |
 | Scope | v1 |
-| Last updated | 2026-09-03 |
+| Last updated | 2026-09-06 |
 
-Nine ADRs are proposed alongside this document (`adr/001`–`adr/009`). They are **Proposed**, not
-Accepted: this document describes the design they imply so it can be reviewed as a whole. Accepting
-or overturning them is the gate on starting M0.
+Ten ADRs (`adr/001`–`adr/010`) are **Accepted** as of 2026-09-06, after the M0 gate review. This
+document describes the design they imply. Accepted ADRs are not edited; a changed mind is a new ADR
+that supersedes the old one (`07-ways-of-working.md` §5), and this document is updated to match.
 
 ---
 
@@ -33,7 +33,8 @@ upgrade problem, or format question is answered by wiping `/data` and reindexing
 assumption is what allows v1 to skip replication, transactions across indexes, and repair tooling.
 
 The browser never talks to Leta (`02-api-guide.md` §5.1). One Express route forwards, and falls back
-to SQL when Leta is unreachable.
+to SQL when Leta is unreachable. In production Leta runs co-located with the backend and PostgreSQL
+(brief §7), so it shares CPU with both.
 
 ---
 
@@ -57,24 +58,27 @@ One process, one binary, one data directory. Internally, ports and adapters:
 │  IngestService     validate → WAL → build segment → publish   │
 │  SearchService     query → plan → execute → rank → project    │
 │  SettingsService   read/patch/reset, trigger reindex          │
-│  ports:  DocumentStore, WriteAheadLog, SnapshotStore, Clock   │
+│  ports:  WriteAheadLog, SnapshotStore, Clock                  │
 └───────────────────────────┬──────────────────────────────────┘
                             │ depends on
 ┌───────────────────────────▼──────────────────────────────────┐
 │ core   (standard library only)                               │
 │  text/     normalization, diacritic folding, tokenization     │
-│  index/    term dictionary, postings, segment, snapshot       │
+│  index/    document store, term dictionary, postings,         │
+│            segment, snapshot                                  │
 │  query/    planner, prefix expansion, typo automaton          │
 │  rank/     rule chain                                         │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 The dependency rule is one-directional and enforced by the build: `core` links no third-party
-target, and CI fails if it gains one. `core` does not know that HTTP, JSON, files, or threads exist.
-Everything in `core` is testable with a string in and a struct out.
+target, and CI fails if it gains one. The single named exception is the vendored `tl::expected`
+header (ADR-005). `core` does not know that HTTP, JSON, files, or threads exist. Everything in
+`core` is testable with a string in and a struct out.
 
-`application` owns the port interfaces; `adapters` implement them. Swapping cpp-httplib for an
-epoll loop, or the snapshot format for a different one, touches one directory.
+`application` owns the port interfaces; `adapters` implement them. The in-memory `DocumentStore` is
+a `core` type, not a port (ADR-001). Swapping cpp-httplib for an epoll loop, or the snapshot format
+for a different one, touches one directory.
 
 See **ADR-001** (layering), **ADR-003** (HTTP), **ADR-005** (errors).
 
@@ -83,7 +87,8 @@ See **ADR-001** (layering), **ADR-003** (HTTP), **ADR-005** (errors).
 ## 3. Threading model
 
 ```
-   HTTP worker threads (N = worker_threads, default = hardware_concurrency)
+   HTTP worker threads (N = worker_threads, default 64 — sized to
+        │                connections, not cores; ADR-003)
         │  reads: lock-free
         │  writes: enqueue + wait
         ▼
@@ -97,17 +102,20 @@ See **ADR-001** (layering), **ADR-003** (HTTP), **ADR-005** (errors).
         │  builds a new segment, publishes a new snapshot
         ▼
    maintenance thread
-        │  segment merge, snapshot write, WAL truncation
+        │  segment merge, snapshot write, WAL segment rotation
 ```
 
 - **Readers never block on writers** (NFR-05). A query loads the snapshot pointer once at the start
   and holds that `shared_ptr` for its whole lifetime. A concurrent publish creates a new snapshot;
   the in-flight query finishes against the old one and releases it. Memory is reclaimed when the
-  last reader drops it.
+  last reader drops it. The cost per query is one atomic load and one refcount increment; the path
+  is lock-free, not wait-free (ADR-007).
 - **Exactly one writer.** All mutations funnel through the indexer thread, so no index data
   structure needs internal locking. Concurrency lives in two files, not scattered through `core`.
 - Ingestion is synchronous from the client's point of view (FR-14): the HTTP thread enqueues the
   batch and waits on a future that the indexer completes after the WAL fsync and the publish.
+- A keep-alive connection occupies an HTTP worker until it closes, which is why the pool default is
+  tied to expected connections rather than `hardware_concurrency`.
 - Every shared declaration carries a comment naming which thread writes it and under what ordering.
 
 See **ADR-007**.
@@ -138,7 +146,8 @@ to it and is never exposed internally.
 stored and returned), FR-16 (nested objects and arrays verbatim), and FR-17 (primary key returned in
 the submitted JSON type) with no type-fidelity bugs, and makes retrieval a slice copy. Projection
 for `displayedAttributes` and `attributesToRetrieve` parses on the way out, for at most `limit`
-documents per query. See **ADR-004**.
+documents per query. Partial update (FR-15) splices raw slices of untouched fields rather than
+re-serializing them. See **ADR-004**.
 
 Segments follow the Lucene model: a batch produces a new immutable segment; deletes set a tombstone
 bit; a background merge compacts small segments. Nothing published is ever mutated, which is what
@@ -187,7 +196,7 @@ makes the lock-free read path safe.
 This budget is a design constraint, not a measurement. Each stage gets a benchmark in M11 and the
 table is updated with real numbers. The dominant risk is candidate expansion when a two-typo term
 (FR-23, length ≥ 9) matches a large slice of the dictionary; the mitigation is a cap on candidates
-per term, ordered by edit distance then frequency.
+per term, ordered by edit distance then frequency, set by server configuration (ADR-008).
 
 ---
 
@@ -200,7 +209,7 @@ per term, ordered by edit distance then frequency.
 2. parse     simdjson, streaming; extract primary key and searchable fields
 3. validate  primary key present and of a permitted type; UTF-8 valid
 4. enqueue   hand to the indexer thread, HTTP thread waits
-5. WAL       append framed records, CRC, fsync  ← the acknowledgement point (FR-50)
+5. WAL       append one framed record for the batch, CRC, fsync  ← the acknowledgement point (FR-50)
 6. build     assign docIds, tokenize searchable attributes, build a segment
 7. publish   atomic store of the new snapshot
 8. respond   200 with the count
@@ -217,6 +226,11 @@ what makes reindexing into a live index safe (`02-api-guide.md` §4.1).
 
 ## 7. Persistence and recovery
 
+**Layout.** One directory per index, `<data>/indexes/<uid>/`, containing that index's WAL segments
+(`wal-NNNNNN.log`) and its snapshot (`snapshot.leta`). Index creation and deletion are directory
+operations — deletion is a rename to `<uid>.deleting` followed by removal, so a crash mid-delete
+leaves either a whole index or a trash directory swept at startup.
+
 **WAL record framing:**
 
 ```
@@ -226,13 +240,17 @@ what makes reindexing into a live index safe (`02-api-guide.md` §4.1).
 └────────┴─────────┴────────┴────────┴──────────┴──────────────┘
 ```
 
-Types: `document_upsert`, `document_delete`, `documents_clear`, `settings_patch`, `index_create`,
-`index_delete`. Replay is idempotent, so a partial trailing record is truncated and ignored — the
-CRC is what makes a torn write detectable rather than silently corrupting.
+Types: `index_meta`, `document_upsert` (one per batch), `document_delete`, `documents_clear`,
+`settings_patch`. The CRC covers header and payload; `length` is bounded by the FR-14 body limit and
+checked before allocation. Replay is idempotent, so a partial trailing record in the newest segment
+is truncated and ignored — the CRC is what makes a torn write detectable rather than silently
+corrupting. A bad frame in an older segment is real corruption and the server refuses to start.
 
-**Snapshot** contains documents and settings, not the inverted index. On startup the server replays
-snapshot + WAL and rebuilds the search structures (FR-52), serving 503 on `/health` until done
-(FR-60).
+**Snapshot** contains documents and settings, not the inverted index. It is taken at a segment
+boundary: the indexer rotates to a new WAL segment, the maintenance thread writes the snapshot
+(temp file → fsync → rename → directory fsync), and only then deletes the superseded segments.
+Ingest never stalls. On startup the server loads the snapshot, replays the segments above it
+(FR-52), and rebuilds the search structures, serving 503 on `/health` until done (FR-60).
 
 > **Open tension.** NFR-03 requires a 100k-document restore in ≤ 15 s, while NFR-02 sets ingest
 > throughput at ≥ 5 000 docs/s — which would take 20 s for the same corpus. Restore is a different
@@ -269,12 +287,14 @@ See **ADR-008**.
 
 **Configuration** — `Config` is built once at startup from environment then CLI flags (flags win,
 FR-63), validated, and passed by const reference. No global access, no re-reading, no hot reload in
-v1.
+v1. Server-level tuning knobs that are not per-index settings — `worker_threads`, the typo candidate
+cap — live here.
 
 **Errors** — `leta::Result<T, Error>` through core and application; exceptions only for
-unrecoverable conditions, caught at the HTTP boundary. `Error` carries the stable `code`, the
-`type`, and a human message; the HTTP adapter is the only place that knows about status codes
-(FR-71). Internal detail goes to the log, correlated by `X-Request-Id`. See **ADR-005**.
+unrecoverable conditions, caught at the HTTP boundary. `Error` carries the stable `code` and a human
+message; the FR-71 `type` is derived from the code by one table, and the HTTP adapter is the only
+place that knows about status codes. Internal detail goes to the log, correlated by `X-Request-Id`.
+See **ADR-005**.
 
 **Observability** — every request logs one structured JSON line (FR-65). Metrics are a small
 in-process registry with counters and histograms, encoded to Prometheus text on scrape (FR-62);
@@ -304,13 +324,13 @@ writes a final snapshot if cheap, and exits within 10 s (FR-66).
 
 | ADR | Decision | Status |
 |---|---|---|
-| ADR-001 | Ports and adapters layering, enforced by the build | Proposed |
-| ADR-002 | CMake + presets + CPM.cmake for dependencies | Proposed |
-| ADR-003 | cpp-httplib behind an `HttpServer` port | Proposed |
-| ADR-004 | simdjson for ingest; documents stored as raw bytes | Proposed |
-| ADR-005 | `leta::Result<T, Error>` over `tl::expected` | Proposed |
-| ADR-006 | Catch2 v3 with FR-ID tags | Proposed |
-| ADR-007 | Single writer, immutable segments, snapshot swap | Proposed |
-| ADR-008 | Sorted term dictionary + block-compressed postings | Proposed |
-| ADR-009 | WAL framing and snapshot format | Proposed |
-| ADR-010 | Linux container as the only deployment artifact | **Accepted** 2026-09-05 |
+| ADR-001 | Ports and adapters layering, enforced by the build | Accepted 2026-09-06 |
+| ADR-002 | CMake + presets + CPM.cmake for dependencies | Accepted 2026-09-06 |
+| ADR-003 | cpp-httplib behind an `HttpServer` port; pool sized to connections | Accepted 2026-09-06 |
+| ADR-004 | simdjson for ingest; documents stored as raw bytes | Accepted 2026-09-06 |
+| ADR-005 | `leta::Result<T, Error>` over vendored `tl::expected` | Accepted 2026-09-06 |
+| ADR-006 | Catch2 v3 with FR-ID tags | Accepted 2026-09-06 |
+| ADR-007 | Single writer, immutable segments, snapshot swap | Accepted 2026-09-06 |
+| ADR-008 | Sorted term dictionary + block-compressed postings | Accepted 2026-09-06 |
+| ADR-009 | WAL framing, segment rotation and snapshot format | Accepted 2026-09-06 |
+| ADR-010 | Linux container as the only deployment artifact | Accepted 2026-09-05 |

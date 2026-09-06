@@ -2,8 +2,9 @@
 
 | | |
 |---|---|
-| Status | Proposed |
+| Status | Accepted |
 | Date | 2026-09-03 |
+| Accepted | 2026-09-06 |
 | Requirements | G4, NFR-06, NFR-14 |
 
 ## Context
@@ -20,9 +21,17 @@ Three layers with dependencies pointing inward only: `core` (pure domain), `appl
 and port interfaces), `adapters` (HTTP, storage, config, metrics, logging).
 
 `core` links against the standard library and nothing else. The CMake target for `leta_core` declares
-no third-party dependency, and CI fails the build if one appears. `application` defines the port
-interfaces it needs (`DocumentStore`, `WriteAheadLog`, `SnapshotStore`, `Clock`); `adapters` implement
-them. Dependencies are injected through constructors — no singletons, no service locator.
+no third-party dependency, and CI fails the build if one appears. The single documented exception is
+the vendored `tl::expected` header inside `core` (ADR-005): a copied file, not a linked target.
+
+`application` defines the port interfaces it needs (`WriteAheadLog`, `SnapshotStore`, `Clock`);
+`adapters` implement them. Dependencies are injected through constructors — no singletons, no
+service locator.
+
+`DocumentStore` — the in-memory raw-byte document arena of ADR-004 — is a `core` type, not a port.
+Every byte of it lives in RAM (`03-architecture.md` §10), and a port with exactly one in-memory
+implementation is the ceremony alternative B rejects. It becomes a port only if a disk-backed store
+is ever introduced.
 
 ## Alternatives considered
 
@@ -49,4 +58,5 @@ third-party link dependency.
 ## Revisit when
 
 Never, realistically. Reversing this mid-project would be a rewrite; that is the point of deciding it
-first.
+first. The one narrower trigger is a disk-backed document store, which would promote `DocumentStore`
+to a port without touching the layering itself.
