@@ -24,6 +24,7 @@ Dockerfile   text
 # Dotfile configs that linguist would otherwise not classify
 .clang-format linguist-language=YAML
 .clang-tidy   linguist-language=YAML
+.clangd       linguist-language=YAML
 .editorconfig linguist-language=EditorConfig
 
 # ---------------------------------------------------------------------------
@@ -67,9 +68,9 @@ docs/02-api-spec.yaml -linguist-documentation
 # Export — files that don't belong in `git archive` tarballs (release ZIPs)
 # ---------------------------------------------------------------------------
 .github/         export-ignore
-.vscode/         export-ignore
 .gitattributes   export-ignore
 .gitignore       export-ignore
 .editorconfig    export-ignore
 .clang-format    export-ignore
 .clang-tidy      export-ignore
+.clangd          export-ignore

@@ -1,0 +1,29 @@
+# clangd project configuration — editor-agnostic.
+# Neovim, Vim, Emacs, VS Code and any other LSP client read this file, so
+# language-server behaviour stays the same for everyone without per-editor config.
+# Reference: https://clangd.llvm.org/config
+#
+# Things that can ONLY be set on the clangd command line (not here) live in the
+# owner's editor config, not in the repo: --query-driver, --background-index,
+# --header-insertion, --completion-style.
+
+CompileFlags:
+  # Matches the `dev` preset's binaryDir in CMakePresets.json (M0-T3).
+  # Until that preset exists clangd reports "no compilation database" — expected.
+  CompilationDatabase: build/dev
+
+Diagnostics:
+  # Checks come from .clang-tidy at the repo root; nothing to repeat here.
+  # Include-cleaner diagnostics stay off during bring-up for the same reason
+  # misc-include-cleaner is disabled in .clang-tidy — flip both to Strict at M1.
+  UnusedIncludes: None
+  MissingIncludes: None
+
+InlayHints:
+  Enabled: true
+  ParameterNames: true
+  DeducedTypes: true
+  Designators: true
+
+Hover:
+  ShowAKA: true

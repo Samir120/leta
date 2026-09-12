@@ -24,26 +24,33 @@ Testing/
 /PROJECT_INSTRUCTIONS.md
 
 # ---------------------------------------------------------------------------
-# VS Code
-# The shared workspace files are committed so contributors get the same
-# clangd / CMake Tools defaults. Everything else under .vscode/ is personal.
+# Editors
+# Nothing editor-specific is committed. Language-server behaviour that the whole
+# project should share lives in the editor-agnostic .clangd file at the root.
 # ---------------------------------------------------------------------------
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-!.vscode/tasks.json
-!.vscode/launch.json
-.vscode-server/
+# Vim / Neovim
+*.swp
+*.swo
+*.swn
+*~
+Session.vim
+.netrwhist
+tags
+TAGS
+.exrc
+.nvimrc
+.nvim.lua
 
-# Editor scratch that sometimes sneaks in from other tools
+# Other editors' workspace state, in case a contributor uses one
+.vscode/
+.vscode-server/
 .idea/
+.DS_Store
+
+# Language-server and indexer caches
 .cache/
 .ccls-cache/
 .clangd/
-*.swp
-*.swo
-*~
-.DS_Store
 
 # ---------------------------------------------------------------------------
 # Sanitizer, fuzzer and coverage artefacts
