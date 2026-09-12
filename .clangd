@@ -8,9 +8,10 @@
 # --header-insertion, --completion-style.
 
 CompileFlags:
-  # Matches the `dev` preset's binaryDir in CMakePresets.json (M0-T3).
-  # Until that preset exists clangd reports "no compilation database" — expected.
-  CompilationDatabase: build/dev
+  # Matches the `debug` preset's binaryDir (M0-T3, D1/D3: build/<preset>/).
+  # Until that preset has been configured once, clangd reports "no compilation
+  # database" — expected.
+  CompilationDatabase: build/debug
 
 Diagnostics:
   # Checks come from .clang-tidy at the repo root; nothing to repeat here.
