@@ -1,0 +1,16 @@
+// Template for the generated build_info_generated.cpp. cmake/LetaBuildInfo.cmake computes the
+// values; src/adapters/CMakeLists.txt runs configure_file(@ONLY). Never edit the generated copy.
+#include "adapters/config/build_info.hpp"
+
+namespace leta::config {
+
+BuildInfo build_info() noexcept {
+    return BuildInfo{
+        .version = "@LETA_VERSION_STRING@",
+        .commit = "@LETA_GIT_COMMIT@",
+        .build_type = "@CMAKE_BUILD_TYPE@",
+        .compiler = "@LETA_COMPILER_STRING@",
+    };
+}
+
+}  // namespace leta::config

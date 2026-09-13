@@ -1,0 +1,158 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_COLOR_DIAGNOSTICS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "displayName": "Debug",
+      "description": "Debug build, no instrumentation. The everyday preset; clangd reads build/debug.",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "LETA_INSTRUMENTATION": "none" }
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "displayName": "Release",
+      "description": "Optimised build, no instrumentation.",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "LETA_INSTRUMENTATION": "none" }
+    },
+    {
+      "name": "asan-ubsan",
+      "inherits": "base",
+      "displayName": "ASan + UBSan",
+      "description": "AddressSanitizer and UndefinedBehaviorSanitizer (NFR-06).",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "LETA_INSTRUMENTATION": "asan-ubsan" }
+    },
+    {
+      "name": "tsan",
+      "inherits": "base",
+      "displayName": "TSan",
+      "description": "ThreadSanitizer (NFR-06).",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "LETA_INSTRUMENTATION": "tsan" }
+    },
+    {
+      "name": "coverage",
+      "inherits": "base",
+      "displayName": "Coverage (Clang)",
+      "description": "Source-based coverage for llvm-cov (NFR-14). Requires CC=clang CXX=clang++.",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "LETA_INSTRUMENTATION": "coverage" }
+    },
+    {
+      "name": "fuzz",
+      "inherits": "base",
+      "displayName": "Fuzz (Clang)",
+      "description": "libFuzzer with ASan + UBSan (NFR-07). Requires CC=clang CXX=clang++.",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "LETA_INSTRUMENTATION": "fuzz" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "release", "configurePreset": "release" },
+    { "name": "asan-ubsan", "configurePreset": "asan-ubsan" },
+    { "name": "tsan", "configurePreset": "tsan" },
+    { "name": "coverage", "configurePreset": "coverage" },
+    { "name": "fuzz", "configurePreset": "fuzz" }
+  ],
+  "testPresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false }
+    },
+    { "name": "debug", "inherits": "base", "configurePreset": "debug" },
+    { "name": "release", "inherits": "base", "configurePreset": "release" },
+    {
+      "name": "asan-ubsan",
+      "inherits": "base",
+      "configurePreset": "asan-ubsan",
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:strict_string_checks=1",
+        "UBSAN_OPTIONS": "print_stacktrace=1"
+      }
+    },
+    {
+      "name": "tsan",
+      "inherits": "base",
+      "configurePreset": "tsan",
+      "environment": { "TSAN_OPTIONS": "halt_on_error=1:second_deadlock_stack=1" }
+    },
+    {
+      "name": "coverage",
+      "inherits": "base",
+      "configurePreset": "coverage",
+      "environment": {
+        "LLVM_PROFILE_FILE": "${sourceDir}/build/coverage/profiles/%m-%p.profraw"
+      }
+    },
+    {
+      "name": "fuzz",
+      "inherits": "base",
+      "configurePreset": "fuzz",
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:strict_string_checks=1",
+        "UBSAN_OPTIONS": "print_stacktrace=1"
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "debug",
+      "steps": [
+        { "type": "configure", "name": "debug" },
+        { "type": "build", "name": "debug" },
+        { "type": "test", "name": "debug" }
+      ]
+    },
+    {
+      "name": "release",
+      "steps": [
+        { "type": "configure", "name": "release" },
+        { "type": "build", "name": "release" },
+        { "type": "test", "name": "release" }
+      ]
+    },
+    {
+      "name": "asan-ubsan",
+      "steps": [
+        { "type": "configure", "name": "asan-ubsan" },
+        { "type": "build", "name": "asan-ubsan" },
+        { "type": "test", "name": "asan-ubsan" }
+      ]
+    },
+    {
+      "name": "tsan",
+      "steps": [
+        { "type": "configure", "name": "tsan" },
+        { "type": "build", "name": "tsan" },
+        { "type": "test", "name": "tsan" }
+      ]
+    },
+    {
+      "name": "coverage",
+      "steps": [
+        { "type": "configure", "name": "coverage" },
+        { "type": "build", "name": "coverage" },
+        { "type": "test", "name": "coverage" }
+      ]
+    },
+    {
+      "name": "fuzz",
+      "steps": [
+        { "type": "configure", "name": "fuzz" },
+        { "type": "build", "name": "fuzz" },
+        { "type": "test", "name": "fuzz" }
+      ]
+    }
+  ]
+}

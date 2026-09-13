@@ -26,8 +26,14 @@ tight process — reading this first will save both of us time.
 ```bash
 git clone https://github.com/Samir120/leta.git
 cd leta
-cmake --workflow --preset dev
+cmake --workflow --preset debug
 ```
+
+Presets: `debug`, `release`, `asan-ubsan`, `tsan`, `coverage`, `fuzz` — the same six names for
+configure, build, test and workflow presets, each writing to `build/<preset>/`. `coverage` and
+`fuzz` need Clang. Pick the compiler with `CC`/`CXX`; keep personal variants in the gitignored
+`CMakeUserPresets.json`. `cmake --preset debug -DLETA_CLANG_TIDY=ON` runs clang-tidy as part of
+the build, which is what CI does.
 
 You need CMake ≥ 3.25, GCC ≥ 13 or Clang ≥ 17, Ninja, and Docker (for the integration tests and
 container build). Dependencies are fetched by the build; nothing else to install.

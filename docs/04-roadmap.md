@@ -52,7 +52,7 @@ very differently from one that appears fully formed the week before a job applic
 
 Nothing but the machinery. No product code.
 
-- CMake ≥ 3.25 with presets (`debug`, `release`, `asan`, `tsan`, `coverage`); CPM.cmake wired
+- CMake ≥ 3.25 with presets (`debug`, `release`, `asan-ubsan`, `tsan`, `coverage`, `fuzz`); CPM.cmake wired
 - Layer targets `leta_core`, `leta_application`, `leta_adapters`, with the CI check that `leta_core`
   links no third-party target (ADR-001)
 - clang-format and clang-tidy configs; Catch2 v3 and Google Benchmark; empty `leta --version` binary
@@ -61,7 +61,7 @@ Nothing but the machinery. No product code.
 - Dockerfile skeleton, non-root, multi-arch; README with a build section
 
 **Closes:** FR-68, NFR-09, and the scaffolding for NFR-06/13/14
-**Exit demo:** `cmake --workflow --preset ci` green on both compilers; `docker run …/leta --version` prints version, commit, build type, compiler.
+**Exit demo:** `cmake --workflow --preset <p>` green for `debug`, `release`, `asan-ubsan`, `tsan` under GCC and Clang, and for `coverage`, `fuzz` under Clang; `docker run …/leta --version` prints version, commit, build type, compiler.
 
 ### M1 — Walking skeleton · 4 sessions
 

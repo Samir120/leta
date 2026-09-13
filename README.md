@@ -123,13 +123,17 @@ fails the build if that changes. Why: [ADR-001](docs/adr/001-ports-and-adapters.
 ```bash
 git clone https://github.com/Samir120/leta.git
 cd leta
-cmake --workflow --preset dev          # configure + build + unit tests
-./build/dev/src/leta --version
+cmake --workflow --preset debug        # configure + build + tests
+./build/debug/bin/leta --version
 ```
 
-Planned requirements: CMake ≥ 3.25, GCC ≥ 13 or Clang ≥ 17, Ninja. Linux only; Windows and macOS
-hosts run the container ([ADR-010](docs/adr/010-linux-container-only.md)). Dependencies are fetched
-at configure time.
+Six presets, same names for `cmake --preset`, `--build --preset`, `ctest --preset` and
+`--workflow --preset`: `debug`, `release`, `asan-ubsan`, `tsan`, `coverage`, `fuzz`. The last two
+need Clang. Each writes to `build/<preset>/`. The compiler comes from `CC`/`CXX`; personal overrides
+go in `CMakeUserPresets.json`, which is gitignored.
+
+Requirements: **CMake ≥ 3.25**, **GCC ≥ 13** or **Clang ≥ 17**, **Ninja**, git. Linux only. Windows
+and macOS hosts should use the container (see [ADR-010](docs/adr/010-linux-container-only.md)).
 
 ## Documentation
 

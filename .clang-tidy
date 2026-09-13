@@ -3,8 +3,14 @@
 # Tighten over time by deleting exclusions, never by adding NOLINT in code without a comment.
 # Requires clang-tidy ≥ 17.
 #
-# Run locally:   clang-tidy -p build/dev src/core/tokenizer.cpp
-# Run in CI:     run-clang-tidy -p build/dev -quiet
+# Run locally:   clang-tidy -p build/debug src/core/tokenizer.cpp
+# As part of a build (what CI does):
+#                cmake --preset debug -DLETA_CLANG_TIDY=ON && cmake --build --preset debug
+#
+# Third-party code is never linted, and that is not done here: the vendored headers under
+# src/core/third_party and every CPM-fetched dependency are SYSTEM include directories, and
+# clang-tidy reports nothing from system headers. HeaderFilterRegex only has to say which of
+# the remaining headers are ours.
 #
 # NOTE: YAML block scalars (the `Checks: >` below) do not support inline comments —
 # a `#` inside the block becomes part of the string and breaks clang-tidy. That's why
@@ -51,8 +57,8 @@
 #       Not project style.
 #
 #   modernize-use-nodiscard
-#       [[nodiscard]] is applied deliberately via LETA_NODISCARD on Result-returning
-#       functions (ADR-005). Auto-suggesting it on every non-void function is noise.
+#       [[nodiscard]] is applied deliberately on Result-returning functions (ADR-005).
+#       Auto-suggesting it on every non-void function is noise.
 #
 #   readability-identifier-length
 #       Single-letter loop indices and short lambda params are fine. The naming rules
@@ -74,6 +80,10 @@
 #
 #   cert-err58-cpp
 #       "Static objects may throw" — fires on every global Catch2 TEST_CASE.
+#
+#   portability-avoid-pragma-once
+#       06-coding-standards.md §2 mandates #pragma once in every header. The check exists
+#       from clang-tidy 21; older versions ignore the entry.
 # ---------------------------------------------------------------------------
 
 Checks: >
@@ -108,13 +118,18 @@ Checks: >
   -hicpp-function-size,
   -readability-else-after-return,
   -misc-include-cleaner,
-  -cert-err58-cpp
+  -cert-err58-cpp,
+  -misc-include-cleaner,
+  -cert-err58-cpp,
+  -portability-avoid-pragma-once
 
 # Every warning is an error in CI. Locally, clangd shows them as warnings.
 WarningsAsErrors: '*'
 
-# Only lint headers that belong to us. Third-party headers under _deps/ never match.
-HeaderFilterRegex: '^(include|src|tests)/.*\.(hpp|h)$'
+# Only lint headers that belong to us. The paths clang-tidy sees come from compile_commands.json
+# and are absolute (-I/…/leta/src), so the pattern must not be anchored at the start of the string.
+# Third-party headers are SYSTEM includes and never reach this filter.
+HeaderFilterRegex: '(^|/)(include|src|tests)/.*\.(hpp|h)$'
 
 # Formatting fixes from `-fix` use .clang-format.
 FormatStyle: file
