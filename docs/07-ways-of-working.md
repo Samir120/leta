@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Status | v1 |
+| Status | v1.1 |
 | Audience | the owner and Claude |
-| Last updated | 2026-09-03 |
+| Last updated | 2026-09-21 |
 
 How the project is actually run: one developer, evenings and weekends, implementation drafted in
 Claude Project chats and built locally.
@@ -18,7 +18,7 @@ Claude Project chats and built locally.
         │
         ├─ 2. Spec ────────── chat: agree the task spec (§2). Owner accepts.
         │
-        ├─ 3. Implement ───── chat: Claude produces complete files + tests
+        ├─ 3. Implement ───── chat: Claude delivers complete files + tests, inline
         │
         ├─ 4. Verify ──────── owner: build, test, sanitizers. Paste output back.
         │
@@ -33,8 +33,15 @@ Claude Project chats and built locally.
 document, specifying, implementing, reviewing, and debugging a specific failure. Long chats
 accumulate superseded code and degrade; when a chat is done, take the state update and open a new one.
 
-Because Claude cannot build or run anything, step 4 is the only source of truth about whether the
-code works. Claude never asserts that it does.
+**Step 3 is inline.** Claude delivers every repository file in the chat, one block per file with
+its path on the first line, in paste order, each with an explanation of what it is for and what to
+notice — never as an archive or a bundle. The owner places every file by hand; that is the point of
+running the project in chats rather than in an agentic tool.
+
+**Step 4 is the only source of truth.** Claude may pre-check files in a sandbox when one is
+available, and says so with the toolchain used; that is evidence, not verification. Whether the
+code works on the owner's machine is established only by the owner building it. Claude never
+asserts that it does.
 
 ---
 
@@ -134,7 +141,7 @@ on-disk format, index data structures, error mechanism, dependencies, protocol b
 - **Trunk-based.** `main` is always green. Short-lived branches: `feat/m2-typo-automaton`,
   `fix/wal-truncate-race`, `docs/architecture`, `chore/ci-arm64`.
 - **Conventional Commits**, with the requirement IDs in the body:
-  ```
+```
   feat(core): Damerau-Levenshtein automaton for typo candidates
 
   Builds a Levenshtein automaton over the query term and intersects it with
@@ -143,7 +150,7 @@ on-disk format, index data structures, error mechanism, dependencies, protocol b
 
   Covers: FR-23
   Refs: ADR-004
-  ```
+```
   Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`.
 - One logical change per commit. Refactors are separate commits from behaviour changes — always.
 - PRs even when working alone: the description is a durable record, and CI runs on it. Squash merge.
