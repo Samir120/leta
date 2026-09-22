@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Status | v1.1 |
+| Status | v1.2 |
 | Audience | the owner and Claude |
-| Last updated | 2026-09-21 |
+| Last updated | 2026-09-22 |
 
 How the project is actually run: one developer, evenings and weekends, implementation drafted in
 Claude Project chats and built locally.
@@ -16,38 +16,50 @@ Claude Project chats and built locally.
 ```
         ┌─ 1. Plan ────────── pick the next task from 04-roadmap.md
         │
-        ├─ 2. Spec ────────── chat: agree the task spec (§2). Owner accepts.
+        ├─ 2. Read ────────── Claude reads the repository at the hash recorded in STATE.md
         │
-        ├─ 3. Implement ───── chat: Claude delivers complete files + tests, inline
+        ├─ 3. Spec + deliver ─ chat: spec on top, then every file inline. One turn for small
+        │                     tasks; spec-only first for large ones or open ADR-tier decisions
         │
         ├─ 4. Verify ──────── owner: build, test, sanitizers. Paste output back.
         │
-        ├─ 5. Review ──────── chat: review against the checklist (§4)
+        ├─ 5. Review ──────── chat: review against the checklist (§4); fix what the output shows
         │
         ├─ 6. Land ────────── owner: commit, push, CI green
         │
-        └─ 7. Record ──────── Claude emits updated STATE.md; owner replaces it
+        └─ 7. Record ──────── Claude writes STATE.md once, when the task is DONE or the chat closes
 ```
 
 **One task per chat**, named after the task (`M2-T3 typo automaton`). Separate chats for writing a
 document, specifying, implementing, reviewing, and debugging a specific failure. Long chats
 accumulate superseded code and degrade; when a chat is done, take the state update and open a new one.
 
+**Step 2 replaces pasting.** The repository is public. Claude reads the current content of any file
+it will change, from origin, before writing. It never asks the owner to paste a file that is already
+on origin; the owner pastes only what is not there — build output, local errors, uncommitted work.
+
 **Step 3 is inline.** Claude delivers every repository file in the chat, one block per file with
 its path on the first line, in paste order, each with an explanation of what it is for and what to
 notice — never as an archive or a bundle. The owner places every file by hand; that is the point of
 running the project in chats rather than in an agentic tool.
 
-**Step 4 is the only source of truth.** Claude may pre-check files in a sandbox when one is
-available, and says so with the toolchain used; that is evidence, not verification. Whether the
-code works on the owner's machine is established only by the owner building it. Claude never
-asserts that it does.
+**Step 4 is the only source of truth.** Claude does not build, run, or test anything; it reads the
+repository and delivers files with the exact commands to run. Whether the code works is established
+only by the owner building it and pasting the output back. Claude never asserts that it does, and
+never runs the commands in the owner's place — running them is how the owner learns the codebase.
+
+**Decisions inside a task have two tiers.** A decision an ADR would record — a dependency not
+already named by an accepted ADR, the API contract, the on-disk format, the concurrency model, a
+requirement — stops the chat: options, a recommendation, and a wait. Everything else — how a package
+is pinned, how tests are discovered, where a helper lives — is decided, implemented, and recorded on
+the chat's running ledger as `decided: <what> — <why>`. The owner reviews those decisions at
+delivery and overrules any of them there.
 
 ---
 
 ## 2. Task spec template
 
-Kept in the chat, and summarized in `STATE.md` §4 while the task is active.
+Kept in the chat, and summarized in `STATE.md`'s task board while the task is active.
 
 ```markdown
 ## M<n>-T<n> — <short title>
@@ -72,14 +84,18 @@ Kept in the chat, and summarized in `STATE.md` §4 while the task is active.
 **Acceptance** — the command that demonstrates it and the output that means success.
 ```
 
-Rules: no implementation code before the spec is accepted. A task that cannot be specified in half a
-page is too big — split it. Estimate in sessions, not hours; anything over three sessions is too big.
+Rules: the spec comes first, but for a task of one session or less it arrives in the same turn as
+the files, spec on top; the owner accepts the spec by placing the files and rejects it by saying so.
+A larger task, or one with an ADR-tier decision open, gets a spec-only turn. A task that cannot be
+specified in half a page is too big — split it. Estimate in sessions, not hours; anything over three
+sessions is too big.
 
 ---
 
 ## 3. Definition of Done
 
-A task is DONE only when every box is true. Claude may not tick a box it cannot verify.
+A task is DONE only when every box is true. Claude may not tick a box it cannot verify; the owner's
+pasted output is what ticks it.
 
 - [ ] Behaviour matches the spec; API matches `02-api-spec.yaml` where relevant
 - [ ] Tests exist, tagged with FR/NFR IDs, and the owner has confirmed they pass
@@ -90,7 +106,7 @@ A task is DONE only when every box is true. Claude may not tick a box it cannot 
 - [ ] No new TODOs without an entry in `STATE.md`
 - [ ] Docs updated if behaviour, config, or the API changed
 - [ ] Benchmarks re-run and committed if the change touches a hot path
-- [ ] `STATE.md` updated
+- [ ] `STATE.md` written (§11)
 
 A **milestone** is DONE when every task is DONE, every `Must` requirement in its list has a test
 naming its ID, and the demo in `04-roadmap.md` runs from a clean checkout.
@@ -104,9 +120,9 @@ Claude reviews its own output against this before presenting it, and reviews pas
 **Correctness** — edge cases (empty input, single element, maximum size, Unicode, duplicate keys);
 integer overflow and narrowing; every error path actually reachable and tested; no UB.
 
-**Design** — does it belong in this layer (`PROJECT_INSTRUCTIONS.md` §6)? Does anything in `core`
-now know about HTTP, JSON, or files? Is the interface minimal? Could a test replace a dependency
-without a mock framework?
+**Design** — does it belong in this layer (`03-architecture.md` §2)? Does anything in `core` now
+know about HTTP, JSON, or files? Is the interface minimal? Could a test replace a dependency without
+a mock framework?
 
 **Lifetimes** — every `string_view`, `span`, and reference: who owns the storage and does it outlive
 the view? Anything captured by a lambda that crosses a thread or segment-swap boundary?
@@ -149,7 +165,7 @@ on-disk format, index data structures, error mechanism, dependencies, protocol b
   than a scan of the dictionary.
 
   Covers: FR-23
-  Refs: ADR-004
+  Refs: ADR-008
 ```
   Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`.
 - One logical change per commit. Refactors are separate commits from behaviour changes — always.
@@ -185,9 +201,9 @@ before any new work starts.
 
 - The numbered documents live in `docs/` in the repository **and** in Project Knowledge. The repo is
   authoritative; Project Knowledge is a copy that must be refreshed when a document changes.
-- After any document change: bump its status line, update the row in `STATE.md` §2, re-upload it
-  to the Project, and delete the superseded copy. A stale document in Project Knowledge is worse
-  than a missing one, because it will be believed.
+- After any document change: bump its status line, re-upload it to the Project, delete the
+  superseded copy, and note it in `STATE.md`'s *Project knowledge* table at the next write. A stale
+  document in Project Knowledge is worse than a missing one, because it will be believed.
 - The README is written at M0 and kept true at every milestone, not written at the end. S6 — a
   stranger running Leta in under ten minutes — is a v1 success criterion.
 - Keep a `CHANGELOG.md` from the first tagged release, in Keep a Changelog format.
@@ -215,3 +231,22 @@ before any new work starts.
   run is worth more than three components you cannot.
 - Publish early. The repository is public from the first commit, so make the first commit one you
   would be happy for a reviewer to read.
+
+---
+
+## 11. The state file
+
+`STATE.md` is the snapshot of where the project is: milestone, task board, decisions, open questions,
+session log. It lives in the Claude Project, not in this repository, so that a public reader cannot
+mistake scratch for specification. If it and the docs ever disagree, the state file is wrong.
+
+- **Written once per chat**, by the chat that owns the active task, at exactly one of: the task
+  reaches DONE; the chat is closing; the owner asks. Never on a mid-task status move, a proposed
+  decision, or a document edit — those accumulate on a one-line ledger in the chat and are folded in
+  at the next write.
+- **One writer.** A side chat — a question, a small fix — never writes it; it hands a short delta to
+  the task chat.
+- **What changes:** the header line, the orientation table, the affected board, one session-log
+  line. Delete more than you add; it stays under about two hundred lines.
+- **Identified by date and writing chat**, not a version number. The owner replaces the copy in the
+  Project by hand; there is no merge.
