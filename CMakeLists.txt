@@ -50,6 +50,7 @@ set_property(CACHE LETA_INSTRUMENTATION PROPERTY STRINGS none asan-ubsan tsan co
 
 option(LETA_WERROR "Treat warnings as errors on project targets (NFR-09)" ON)
 option(LETA_CLANG_TIDY "Run clang-tidy on project targets as part of the build" OFF)
+option(LETA_BUILD_BENCHMARKS "Fetch Google Benchmark and build tests/bench (ADR-006)" OFF)
 
 # ---- Global settings -------------------------------------------------------------------------
 
@@ -62,11 +63,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Order matters: instrumentation applies directory-wide flags and must precede every target and
-# (from M0-T4) every dependency, so that sanitizers instrument dependencies too.
+# every dependency, so that sanitizers instrument dependencies too.
 include(LetaInstrumentation)
 include(LetaCompileOptions)
 include(LetaBuildInfo)
 include(LetaLayeringCheck)
+
+# Third-party code is fetched and configured here, before any Leta target exists, so a layer's
+# CMakeLists.txt only ever names targets that are already defined (cmake/LetaDependencies.cmake).
+include(LetaDependencies)
 
 enable_testing()
 

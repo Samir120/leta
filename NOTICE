@@ -4,5 +4,15 @@ Copyright 2026 Samir
 This product is licensed under the Apache License, Version 2.0.
 See the LICENSE file for the full licence text.
 
-Third-party components, once added, are listed with their licences in
-docs/THIRD_PARTY_NOTICES.md.
+Third-party code redistributed in this repository:
+
+  tl::expected 1.3.1 — src/core/third_party/tl/expected.hpp
+    Written by Sy Brand. Dedicated to the public domain under CC0 1.0 Universal.
+    https://github.com/TartanLlama/expected
+
+  CPM.cmake 0.43.1 — cmake/CPM.cmake
+    Copyright (c) 2019-2023 Lars Melchior and contributors. MIT License.
+    https://github.com/cpm-cmake/CPM.cmake
+
+Dependencies fetched and built at build time are listed, with their licences, in
+cmake/LetaDependencies.cmake.
