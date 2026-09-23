@@ -21,3 +21,4 @@ int main(int argc, char* argv[]) {
     static_cast<void>(std::fputs("usage: leta --version\n", stderr));
     return 2;
 }
+// This deliberately long comment exists only to break the format check, and it runs well past one hundred columns.
