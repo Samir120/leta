@@ -1,5 +1,6 @@
 # Leta
 
+[![CI](https://github.com/Samir120/leta/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Samir120/leta/actions/workflows/ci.yml)
 [![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 [![Status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange.svg)](docs/04-roadmap.md)
 
@@ -11,13 +12,14 @@ an index that sits next to your system of record and serves the search box — n
 
 ## Status
 
-**Pre-alpha. There is no code to run yet.**
+**Pre-alpha. The only runnable behaviour is `leta --version`.**
 
-The specification set under [`docs/`](docs/) is complete and the repository scaffolding is in
-progress. Product code begins at milestone M1. Progress is tracked milestone by milestone in
+The specification set under [`docs/`](docs/) is complete, and the build system, test harness and
+CI are in place. Product code begins at milestone M1. Progress is tracked milestone by milestone in
 [`docs/04-roadmap.md`](docs/04-roadmap.md) and summarised in [`CHANGELOG.md`](CHANGELOG.md).
 
-Everything below the next heading describes the target, not the present.
+*What v1 will look like* and *Design targets* below describe the target, not the present.
+*Building from source* describes what works today.
 
 ## Why another search server
 
@@ -73,6 +75,19 @@ The API contract is [`docs/02-api-spec.yaml`](docs/02-api-spec.yaml) (OpenAPI 3.
 walkthrough, including how to keep the index in sync with a PostgreSQL source of truth, is in
 [`docs/02-api-guide.md`](docs/02-api-guide.md).
 
+### Operating it
+
+Configuration is by `LETA_*` environment variables or CLI flags, flags winning. The full list
+arrives with milestone M9; one setting deserves a warning now.
+
+**`LETA_WORKER_THREADS`** (`--worker-threads`), default **64**. Leta serves HTTP from a fixed pool
+of threads, and a keep-alive connection holds its thread until the connection closes. Node's HTTP
+agent keeps connections alive by default, so size the pool to the number of connections your
+backend holds open, not to the number of CPU cores. With more open connections than threads, the
+surplus waits for a free thread and latency degrades sharply rather than gracefully. `/metrics`
+reports how many connections are waiting for a worker, so the condition is visible.
+[ADR-003](docs/adr/003-http-library.md) explains the trade-off.
+
 ## Design targets
 
 For a 100 000-document catalog on a modest 4-vCPU host:
@@ -118,7 +133,9 @@ fails the build if that changes. Why: [ADR-001](docs/adr/001-ports-and-adapters.
 
 ## Building from source
 
-**Not yet possible** — the build system lands with milestone M0. When it does, this is the shape:
+Linux only. You need **CMake ≥ 3.25**, **GCC ≥ 13** or **Clang ≥ 17**, **Ninja** and git; the build
+fetches and hash-checks everything else. Windows and macOS hosts should use the container (see
+[ADR-010](docs/adr/010-linux-container-only.md)).
 
 ```bash
 git clone https://github.com/Samir120/leta.git
@@ -132,8 +149,9 @@ Six presets, same names for `cmake --preset`, `--build --preset`, `ctest --prese
 need Clang. Each writes to `build/<preset>/`. The compiler comes from `CC`/`CXX`; personal overrides
 go in `CMakeUserPresets.json`, which is gitignored.
 
-Requirements: **CMake ≥ 3.25**, **GCC ≥ 13** or **Clang ≥ 17**, **Ninja**, git. Linux only. Windows
-and macOS hosts should use the container (see [ADR-010](docs/adr/010-linux-container-only.md)).
+CI runs the same presets with the same commands on exactly those minimum versions — GCC 13 and
+Clang 17 on x86-64 and arm64, and one leg on CMake 3.25 — so code that only a newer toolchain
+accepts fails there rather than for you ([`ci.yml`](.github/workflows/ci.yml)).
 
 ## Documentation
 

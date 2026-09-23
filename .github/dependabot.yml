@@ -1,0 +1,18 @@
+# Dependabot watches the GitHub Actions in .github/workflows/ and nothing else. Leta's C++
+# dependencies are CPM tarball pins in cmake/LetaDependencies.cmake, which no dependency bot parses
+# (ADR-002); they are reviewed by hand at each release checkpoint.
+#
+# Actions are pinned by full commit SHA with the version as a trailing comment. Dependabot bumps
+# the SHA and the comment together.
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

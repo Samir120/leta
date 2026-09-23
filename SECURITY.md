@@ -55,8 +55,12 @@ Reports in English are preferred; Swedish is also fine.
   the public internet without an auth key or a reverse proxy. Leta is designed to sit behind a
   backend (see [`docs/02-api-guide.md`](docs/02-api-guide.md) §5); operating it otherwise is a
   misconfiguration, not a vulnerability.
-- **Vulnerabilities in dependencies that are already public and being tracked.** Dependabot
-  handles those; a duplicate report doesn't help.
+- **Vulnerabilities in dependencies that Leta's pinned versions do not contain.** Every fetched
+  dependency is pinned by version and tarball hash in
+  [`cmake/LetaDependencies.cmake`](cmake/LetaDependencies.cmake), and the pins are reviewed by hand
+  at each release checkpoint ([ADR-002](docs/adr/002-build-and-dependencies.md)); no bot tracks
+  them. A public advisory that affects a version Leta currently pins *is* in scope — please report
+  it.
 - **Information disclosure through error messages when the master key is not set.** With no key,
   the server accepts all requests by design and logs a warning at startup.
 - Missing security headers, CORS behaviour, TLS termination — Leta doesn't terminate TLS or serve

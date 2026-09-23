@@ -1,0 +1,235 @@
+# The push and pull-request gate of 05-quality-strategy.md §10, as far as M0 reaches (M0-T5).
+#
+#   format     clang-format --dry-run over every tracked C++ file
+#   build      the six presets on the NFR-09 floors (GCC 13, Clang 17), x86-64 and arm64
+#   all-green  the single check branch protection requires; it fails if anything above did
+#
+# Every build leg runs the three commands a contributor runs locally, so nothing here is CI-only:
+#
+#   cmake --preset <p> [-D…]   →   cmake --build --preset <p>   →   ctest --preset <p>
+#
+# `cmake --workflow --preset <p>` is the same three steps, but a workflow preset accepts no -D and
+# six legs need one (clang-tidy, benchmarks). One shape for every leg beats two. The layering check
+# (ADR-001) runs inside the configure step and fails it.
+#
+# Not here yet: requirement coverage and the 80 % gate (M0-T6), the image build (M0-T7), nightly
+# fuzzing and benchmarks (once targets and a dataset exist).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only token. Nothing in this workflow writes to the repository.
+permissions:
+  contents: read
+
+# A new push to a pull request supersedes its run in progress. Runs on main always finish, so every
+# commit on main has a result.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# An explicit `bash` runs with -e and -o pipefail; the implicit default shell omits pipefail.
+defaults:
+  run:
+    shell: bash
+
+env:
+  # The CMake floor of NFR-09 and ADR-002. The hashes in the install step belong to this version;
+  # changing one without the others fails the checksum, which is the intent.
+  CMAKE_FLOOR_VERSION: "3.25.3"
+
+jobs:
+  format:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      # Pinned to the maintainer's local clang-format. Output differs between major versions, and a
+      # CI formatter that disagrees with the editor turns every save into a red build.
+      CLANG_FORMAT_VERSION: "22.1.8"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install clang-format ${{ env.CLANG_FORMAT_VERSION }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet "clang-format==$CLANG_FORMAT_VERSION"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+
+      - name: Check formatting
+        # Vendored headers keep their upstream formatting (ADR-005): excluded, never reformatted.
+        run: |
+          clang-format --version
+          git ls-files -z -- '*.cpp' '*.hpp' ':(exclude)src/core/third_party/**' \
+            | xargs -0 --no-run-if-empty clang-format --dry-run --Werror
+
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      # One red leg must not cancel the others and hide their state.
+      fail-fast: false
+      matrix:
+        # Listed rather than crossed, because the legs are not a full product. The build matrix of
+        # §10 is {GCC 13, Clang 17} × {debug, release} × {x86-64, arm64}; the instrumented presets
+        # run on x86-64 only; coverage and fuzz need Clang (cmake/LetaInstrumentation.cmake).
+        include:
+          # ---- x86-64 --------------------------------------------------------------------------
+          - { id: gcc13-debug-x64-cmake325, name: "GCC 13 · debug · x86-64 · CMake 3.25", runner: ubuntu-24.04, compiler: gcc, preset: debug, cmake_floor: true }
+          - { id: gcc13-release-x64, name: "GCC 13 · release · x86-64", runner: ubuntu-24.04, compiler: gcc, preset: release, benchmarks: true }
+          - { id: gcc13-asan-ubsan-x64, name: "GCC 13 · asan-ubsan · x86-64", runner: ubuntu-24.04, compiler: gcc, preset: asan-ubsan }
+          - { id: gcc13-tsan-x64, name: "GCC 13 · tsan · x86-64", runner: ubuntu-24.04, compiler: gcc, preset: tsan }
+          - { id: clang17-debug-x64-tidy, name: "Clang 17 · debug · x86-64 · clang-tidy", runner: ubuntu-24.04, compiler: clang, preset: debug, tidy: true }
+          - { id: clang17-release-x64, name: "Clang 17 · release · x86-64", runner: ubuntu-24.04, compiler: clang, preset: release, benchmarks: true }
+          - { id: clang17-asan-ubsan-x64, name: "Clang 17 · asan-ubsan · x86-64", runner: ubuntu-24.04, compiler: clang, preset: asan-ubsan }
+          - { id: clang17-tsan-x64, name: "Clang 17 · tsan · x86-64", runner: ubuntu-24.04, compiler: clang, preset: tsan }
+          - { id: clang17-coverage-x64, name: "Clang 17 · coverage · x86-64", runner: ubuntu-24.04, compiler: clang, preset: coverage }
+          - { id: clang17-fuzz-x64, name: "Clang 17 · fuzz · x86-64", runner: ubuntu-24.04, compiler: clang, preset: fuzz }
+          # ---- arm64 ---------------------------------------------------------------------------
+          - { id: gcc13-debug-arm64, name: "GCC 13 · debug · arm64", runner: ubuntu-24.04-arm, compiler: gcc, preset: debug }
+          - { id: gcc13-release-arm64, name: "GCC 13 · release · arm64", runner: ubuntu-24.04-arm, compiler: gcc, preset: release, benchmarks: true }
+          - { id: clang17-debug-arm64, name: "Clang 17 · debug · arm64", runner: ubuntu-24.04-arm, compiler: clang, preset: debug }
+          - { id: clang17-release-arm64, name: "Clang 17 · release · arm64", runner: ubuntu-24.04-arm, compiler: clang, preset: release, benchmarks: true }
+    env:
+      PRESET: ${{ matrix.preset }}
+      COMPILER: ${{ matrix.compiler }}
+      TIDY: ${{ matrix.tidy }}
+      BENCHMARKS: ${{ matrix.benchmarks }}
+      CMAKE_FLOOR: ${{ matrix.cmake_floor }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install toolchain
+        run: |
+          # g++-13 on every leg: Clang builds against libstdc++ too (ADR-007 pins it on both legs).
+          packages=(ninja-build ccache g++-13)
+          if [[ $COMPILER == clang ]]; then
+            # libclang-rt carries the sanitizer, profile and libFuzzer runtimes; clang alone does not.
+            packages+=(clang-17 libclang-rt-17-dev)
+          fi
+          if [[ $TIDY == true ]]; then
+            packages+=(clang-tidy-17)
+          fi
+          sudo apt-get update -q
+          sudo apt-get install -y -q "${packages[@]}"
+
+      - name: Install CMake ${{ env.CMAKE_FLOOR_VERSION }} (the floor)
+        if: matrix.cmake_floor
+        env:
+          SHA256_X86_64: d4d2ba83301b215857d3b6590cd4434a414fa151c5807693abe587bd6c03581e
+          SHA256_AARCH64: cd6e853639f858569e22e6298f009eb24b4702c51c0d5bc1cb36c688f7ce246d
+        run: |
+          arch=$(uname -m)
+          case $arch in
+            x86_64)  sha256=$SHA256_X86_64 ;;
+            aarch64) sha256=$SHA256_AARCH64 ;;
+            *) echo "No pinned CMake for $arch" >&2; exit 1 ;;
+          esac
+          tarball="cmake-$CMAKE_FLOOR_VERSION-linux-$arch.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$tarball" \
+            "https://github.com/Kitware/CMake/releases/download/v$CMAKE_FLOOR_VERSION/$tarball"
+          echo "$sha256  $RUNNER_TEMP/$tarball" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/cmake-$CMAKE_FLOOR_VERSION-linux-$arch/bin" >> "$GITHUB_PATH"
+
+      - name: Select compiler and caches
+        run: |
+          if [[ $COMPILER == gcc ]]; then
+            cc=gcc-13;   cxx=g++-13
+          else
+            cc=clang-17; cxx=clang++-17
+          fi
+          {
+            echo "CC=$cc"
+            echo "CXX=$cxx"
+            # CMake 3.17+ initialises CMAKE_CXX_COMPILER_LAUNCHER from this variable, so ccache
+            # needs no change to the presets or the CMake code.
+            echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+            echo "CCACHE_DIR=$HOME/.ccache"
+            echo "CCACHE_MAXSIZE=300M"
+            # Read by CPM itself (cmake/LetaDependencies.cmake).
+            echo "CPM_SOURCE_CACHE=$HOME/.cache/CPM"
+          } >> "$GITHUB_ENV"
+
+      - name: Lower mmap randomisation for the sanitizer runtimes
+        # The runner kernel randomises mmap with 32 bits of entropy. The TSan and ASan runtimes of
+        # GCC 13 and Clang 17 predate that and are known to abort at startup under it.
+        if: contains(fromJSON('["asan-ubsan", "tsan", "fuzz"]'), matrix.preset)
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
+
+      - name: Cache dependency sources
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.cache/CPM
+          # Sources are identical on every leg and change only when a pin does (ADR-002). Legs that
+          # fetch Google Benchmark keep their own entry so the smaller one never shadows it.
+          key: cpm-${{ matrix.benchmarks && 'bench-' || '' }}${{ hashFiles('cmake/LetaDependencies.cmake') }}
+
+      - name: Cache compiler output
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.ccache
+          # A new key every run, so the cache is saved every run; restore-keys finds the latest.
+          key: ccache-${{ matrix.id }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.id }}-
+
+      - name: Configure
+        run: |
+          args=()
+          if [[ $TIDY == true ]]; then
+            # Pin the executable: the runner can carry several clang-tidy versions, and
+            # cmake/LetaCompileOptions.cmake would otherwise take the first one on PATH.
+            args+=(-DLETA_CLANG_TIDY=ON "-DLETA_CLANG_TIDY_EXECUTABLE=$(command -v clang-tidy-17)")
+          fi
+          if [[ $BENCHMARKS == true ]]; then
+            args+=(-DLETA_BUILD_BENCHMARKS=ON)
+          fi
+          cmake --version
+          if [[ $CMAKE_FLOOR == true ]]; then
+            # Guard against a PATH that silently kept the runner's newer CMake.
+            cmake --version | grep -F "cmake version $CMAKE_FLOOR_VERSION"
+          fi
+          cmake --preset "$PRESET" "${args[@]}"
+
+      - name: Build
+        run: cmake --build --preset "$PRESET"
+
+      - name: Test
+        run: ctest --preset "$PRESET"
+
+      - name: Report the binary
+        # The M0 exit demo, once per leg: version, commit, build type, compiler (FR-68).
+        run: ./build/"$PRESET"/bin/leta --version
+
+      - name: ccache statistics
+        if: always()
+        run: ccache --show-stats
+
+  all-green:
+    name: all green
+    # Runs even when a dependency failed, so that it can fail too. A skipped required check counts
+    # as passing on GitHub, which is exactly the hole this closes.
+    if: always()
+    needs: [format, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          for result in $RESULTS; do
+            [[ $result == success ]] || exit 1
+          done
