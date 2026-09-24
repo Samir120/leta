@@ -31,9 +31,11 @@ cmake --workflow --preset debug
 
 Presets: `debug`, `release`, `asan-ubsan`, `tsan`, `coverage`, `fuzz` — the same six names for
 configure, build, test and workflow presets, each writing to `build/<preset>/`. `coverage` and
-`fuzz` need Clang. Pick the compiler with `CC`/`CXX`; keep personal variants in the gitignored
-`CMakeUserPresets.json`. `cmake --preset debug -DLETA_CLANG_TIDY=ON` runs clang-tidy as part of
-the build, which is what CI does.
+`fuzz` need Clang; the coverage report additionally needs `llvm-profdata` and `llvm-cov` of the same
+LLVM major version (package `llvm`, or `llvm-<major>` on Debian and Ubuntu). Pick the compiler with
+`CC`/`CXX`; keep personal variants in the gitignored `CMakeUserPresets.json`.
+`cmake --preset debug -DLETA_CLANG_TIDY=ON` runs clang-tidy as part of the build, which is what CI
+does.
 
 You need CMake ≥ 3.25, GCC ≥ 13 or Clang ≥ 17, Ninja, and Docker (for the integration tests and
 container build). Dependencies are fetched by the build; nothing else to install.
@@ -48,13 +50,16 @@ Linux only. If you're on Windows or macOS, the supported path is running the con
 2. **Follow the coding standards** in [`docs/06-coding-standards.md`](docs/06-coding-standards.md).
    Run `clang-format` and `clang-tidy` before pushing.
 3. **Tag every new test with the requirement ID it covers:**
-   ```cpp
+```cpp
    TEST_CASE("terms of length 5 tolerate one edit", "[FR-23]") { ... }
-   ```
-   The IDs come from [`docs/01-requirements.md`](docs/01-requirements.md). A CI job fails the build
-   if any Must requirement has no tagged test — this is how NFR-14 stays honest.
+```
+   The IDs come from [`docs/01-requirements.md`](docs/01-requirements.md). Every Must FR has either
+   a tagged test or a line in [`tests/untested-requirements.txt`](tests/untested-requirements.txt)
+   naming the milestone that owes one. When you add the first test for such an FR, delete its line
+   in the same PR — the check fails until you do. It runs as the ctest entry
+   `NFR-14.requirement_coverage`, so `ctest` shows it locally before CI does.
 4. **Use Conventional Commits.** Example:
-   ```
+```
    feat(core): Damerau-Levenshtein automaton for typo candidates
 
    Builds a Levenshtein automaton over the query term and intersects it with
@@ -63,7 +68,7 @@ Linux only. If you're on Windows or macOS, the supported path is running the con
 
    Covers: FR-23
    Refs: ADR-008
-   ```
+```
    Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`.
 5. **Keep behaviour changes and refactors in separate commits.** Always.
 6. **Update the docs in the same PR** if behaviour, configuration, or the API changes.
@@ -76,9 +81,12 @@ Full matrix in [`docs/05-quality-strategy.md`](docs/05-quality-strategy.md) §10
 - Unit, integration, and contract tests
 - AddressSanitizer + UBSan, ThreadSanitizer
 - `clang-format` and `clang-tidy`
-- Requirement-coverage check (every Must has a tagged test)
+- Requirement-coverage check: every Must FR has a tagged test or a line in
+  `tests/untested-requirements.txt`, and no tag names an unknown requirement
+  (`ctest -R NFR-14`, on every leg)
 - Layering check (`leta_core` links no third-party target — see [ADR-001](docs/adr/001-ports-and-adapters.md))
-- Coverage report, floor at 80% of `leta_core`
+- Coverage report, floor at 80 % of `leta_core` lines — locally, after
+  `cmake --workflow --preset coverage`, run `cmake --build --preset coverage --target coverage-report`
 
 `main` is protected. PRs are squash-merged. A red `main` is fixed before any new work starts.
 

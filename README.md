@@ -124,12 +124,13 @@ src/core/        pure domain — tokenizer, index, postings, ranker, typo automa
 src/application/ services orchestrating core; owns the storage and HTTP port interfaces
 src/adapters/    http, storage, config, metrics — replaceable I/O layers
 tests/           unit, integration, contract, recovery, relevance, fuzz, bench, data
-cmake/           build modules
-scripts/         CI enforcement: layering check, requirement-coverage check
+cmake/           build modules, including the configure-time layering check
+scripts/         enforcement run by ctest and CI: requirement coverage, coverage report and gate
 ```
 
-Dependencies point inward only — `src/core` links nothing but the standard library, and a CI job
-fails the build if that changes. Why: [ADR-001](docs/adr/001-ports-and-adapters.md).
+Dependencies point inward only — `src/core` links nothing but the standard library, and the
+configure step fails, locally and in CI, if that changes. Why:
+[ADR-001](docs/adr/001-ports-and-adapters.md).
 
 ## Building from source
 
@@ -146,8 +147,9 @@ cmake --workflow --preset debug        # configure + build + tests
 
 Six presets, same names for `cmake --preset`, `--build --preset`, `ctest --preset` and
 `--workflow --preset`: `debug`, `release`, `asan-ubsan`, `tsan`, `coverage`, `fuzz`. The last two
-need Clang. Each writes to `build/<preset>/`. The compiler comes from `CC`/`CXX`; personal overrides
-go in `CMakeUserPresets.json`, which is gitignored.
+need Clang, and the coverage report (`--target coverage-report`) also needs `llvm-profdata` and
+`llvm-cov` of the same LLVM major version. Each writes to `build/<preset>/`. The compiler comes from
+`CC`/`CXX`; personal overrides go in `CMakeUserPresets.json`, which is gitignored.
 
 CI runs the same presets with the same commands on exactly those minimum versions — GCC 13 and
 Clang 17 on x86-64 and arm64, and one leg on CMake 3.25 — so code that only a newer toolchain

@@ -1,3 +1,4 @@
+<!-- CHANGELOG.md — replace the whole file -->
 # Changelog
 
 All notable changes to Leta are recorded here.
@@ -26,6 +27,9 @@ Pre-alpha. `leta --version` is the only runnable behaviour.
   1.3.1 vendored (ADR-005, ADR-006).
 - Continuous integration on GCC 13 and Clang 17, x86-64 and arm64, with sanitizer, coverage, fuzz,
   clang-tidy and clang-format checks.
+- Requirement-coverage gate: every Must FR has a test tagged with its ID or a tracked line in
+  `tests/untested-requirements.txt`, checked by ctest in every preset (NFR-14).
+- Coverage report with an 80 % line-coverage floor on `leta_core` (NFR-14).
 
 <!--
 Release template — copy for each tag. Delete empty sections.
