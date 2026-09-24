@@ -20,6 +20,7 @@ FR-71  M1
 FR-73  M1
 
 # ---- M2 text pipeline ----
+FR-20  M2
 FR-24  M2
 FR-25  M2
 
