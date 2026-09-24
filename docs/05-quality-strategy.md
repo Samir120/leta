@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Status | Draft v0.1 — **proposed, awaiting owner acceptance** |
+| Status | Draft v0.2 — **proposed, awaiting owner acceptance** |
 | Scope | v1 |
-| Last updated | 2026-09-03 |
+| Last updated | 2026-09-24 |
 
 How we know Leta works. Referenced by S2–S5 and NFR-01 through NFR-14.
 
@@ -13,7 +13,7 @@ How we know Leta works. Referenced by S2–S5 and NFR-01 through NFR-14.
 ## 1. Principles
 
 **A requirement with no test is not done.** This is from `01-requirements.md` §3 and it is enforced
-by a CI job, not by review discipline.
+by a check that runs in every build and on every CI leg (§3), not by review discipline.
 
 **Tests assert behaviour, not implementation.** A refactor that changes no behaviour breaks no test.
 If a test fails during a pure refactor, the test was testing the wrong thing.
@@ -70,19 +70,38 @@ Every test carries its requirement ID as a Catch2 tag (ADR-006):
 TEST_CASE("transposition counts as one edit, not two", "[FR-23]") { ... }
 ```
 
-A CI job extracts all `Must` IDs from `01-requirements.md`, extracts covered tags from
-`./leta_tests --list-tags`, and **fails the build on any Must requirement with no tagged test**. That
-turns NFR-14 from an intention into a gate, and gives a reviewer a single command that shows what any
+The ctest entry `NFR-14.requirement_coverage` (`scripts/check_requirement_coverage.cmake`) reads
+every `Must` FR from `01-requirements.md` and the covered tags from `leta_tests --list-tags`, and
+**fails on any Must FR that has neither a tagged test nor a line in
+`tests/untested-requirements.txt`**. It also fails on a line in that file for an FR that now has a
+test, on a line naming anything but a Must FR, and on a tag naming an ID the requirements do not
+define. Because it is a ctest entry, it runs in every preset, locally and on every CI leg. That turns
+NFR-14 from an intention into a gate, and gives a reviewer a single command that shows what any
 requirement is backed by.
 
-A requirement can be marked deliberately untestable-in-CI only by adding it to an explicit allowlist
-file with a one-line reason. The allowlist is reviewed at each milestone and should stay near empty.
+`tests/untested-requirements.txt` is, at every commit, exactly the set of Must FRs without a test.
+Each line names either the milestone whose tests will cover it, or `untestable` with a one-line
+reason why no CI test can check it. Milestone lines disappear as milestones land; a milestone is not
+done while a line still names it. `untestable` lines are reviewed at each milestone and should stay
+near empty.
+
+The gate covers FRs, as NFR-14 words it. NFRs are verified by the benchmark suite, the sanitizer and
+fuzz jobs, and image inspection (§5, §6, §8, §10); a test may still carry an NFR tag, and the check
+confirms it names a real requirement.
 
 ---
 
 ## 4. Coverage
 
 Line coverage of `leta_core` ≥ 80% (NFR-14), measured with `llvm-cov`, reported per PR.
+
+The report is the `coverage-report` target of the `coverage` preset
+(`scripts/coverage_report.cmake`), run after the coverage tests. It prints `llvm-cov`'s per-file
+table for everything under `src/` and fails if the files under `src/core/` — the vendored
+`third_party/` excluded — fall below the floor. CI writes the same table into the coverage leg's job
+summary. Each report consumes the raw profiles it merges, so a report always describes the binaries
+the last test run executed. While `src/core` compiles no code, the gate says so explicitly and
+passes; it applies from the first line of core code.
 
 Coverage is a floor, not a target. An uncovered branch in WAL recovery matters more than a covered
 accessor, so treat the report as a list of places to look rather than a number to maximize. Do not
@@ -227,7 +246,7 @@ time a human notices, the cause is twenty commits back.
 | TSan, including search-under-ingest stress | push | blocks |
 | clang-format + clang-tidy | push | blocks |
 | Coverage ≥ 80% core | push | blocks |
-| Requirement-coverage check (§3) | push | blocks |
+| Requirement-coverage check (§3), a ctest entry on every leg | push | blocks |
 | `leta_core` links no third-party target (ADR-001) | push | blocks |
 | Relevance evaluation | push, from M5 | reports; blocks on a drop |
 | Benchmarks on the fixed dataset | nightly, release branches | reports; blocks > 25% regression |

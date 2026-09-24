@@ -1,4 +1,4 @@
-# The push and pull-request gate of 05-quality-strategy.md §10, as far as M0 reaches (M0-T5).
+# The push and pull-request gate of 05-quality-strategy.md §10, as far as M0 reaches (M0-T5, T6).
 #
 #   format     clang-format --dry-run over every tracked C++ file
 #   build      the six presets on the NFR-09 floors (GCC 13, Clang 17), x86-64 and arm64
@@ -10,10 +10,14 @@
 #
 # `cmake --workflow --preset <p>` is the same three steps, but a workflow preset accepts no -D and
 # six legs need one (clang-tidy, benchmarks). One shape for every leg beats two. The layering check
-# (ADR-001) runs inside the configure step and fails it.
+# (ADR-001) runs inside the configure step and fails it. The requirement-coverage check (NFR-14) is
+# the ctest entry NFR-14.requirement_coverage and fails the test step of every leg. The coverage leg
+# runs one more local command, the 80 % leta_core line gate (NFR-14):
 #
-# Not here yet: requirement coverage and the 80 % gate (M0-T6), the image build (M0-T7), nightly
-# fuzzing and benchmarks (once targets and a dataset exist).
+#   cmake --build --preset coverage --target coverage-report
+#
+# Not here yet: the image build (M0-T7), nightly fuzzing and benchmarks (once targets and a
+# dataset exist).
 
 name: CI
 
@@ -121,6 +125,11 @@ jobs:
           if [[ $TIDY == true ]]; then
             packages+=(clang-tidy-17)
           fi
+          if [[ $PRESET == coverage ]]; then
+            # llvm-profdata-17 and llvm-cov-17: the report tools must match the compiler's major
+            # version, because the raw profile format changes between them (tests/CMakeLists.txt).
+            packages+=(llvm-17)
+          fi
           sudo apt-get update -q
           sudo apt-get install -y -q "${packages[@]}"
 
@@ -206,11 +215,29 @@ jobs:
         run: cmake --build --preset "$PRESET"
 
       - name: Test
+        # Includes NFR-14.requirement_coverage, so every leg enforces requirement coverage.
         run: ctest --preset "$PRESET"
 
       - name: Report the binary
         # The M0 exit demo, once per leg: version, commit, build type, compiler (FR-68).
         run: ./build/"$PRESET"/bin/leta --version
+
+      - name: Coverage report and the 80 % gate (NFR-14)
+        if: matrix.preset == 'coverage'
+        run: cmake --build --preset coverage --target coverage-report
+
+      - name: Publish the coverage report
+        # Also when the gate failed: the table is what explains the failure.
+        if: always() && matrix.preset == 'coverage'
+        run: |
+          report=build/coverage/coverage-report/report.txt
+          [[ -f $report ]] || exit 0
+          {
+            echo "### Coverage · Clang 17 · x86-64"
+            echo '```'
+            cat "$report"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: ccache statistics
         if: always()

@@ -1,0 +1,76 @@
+# Every Must FR in docs/01-requirements.md that has no Catch2 test tagged with its ID, and why.
+#
+# The ctest entry NFR-14.requirement_coverage (scripts/check_requirement_coverage.cmake) fails when
+# this list and the test tags disagree in either direction: an untested Must FR missing from here,
+# or a line here for an FR that now has a tagged test. So the list only ever shrinks, and at every
+# commit it is exactly the set of Must FRs without a test. Delete a line in the same PR as the
+# first test tagged with its ID.
+#
+# One line per FR:   <FR-ID>  <due>  [note]
+#   <due>  the milestone whose tests will cover it (the "Closes:" lines of docs/04-roadmap.md), or
+#          `untestable` plus a one-line reason why no CI test can check it. Untestable lines are
+#          reviewed at every milestone and should stay near empty (05-quality-strategy.md §3).
+# A milestone is not DONE while a line still names it.
+# Blank lines and lines starting with # are ignored. No semicolons in notes.
+
+# ---- M1 walking skeleton ----
+FR-60  M1  M1 claims it as partial (200 when ready); the 503-during-restore half is M7 work
+FR-70  M1
+FR-71  M1
+FR-73  M1
+
+# ---- M2 text pipeline ----
+FR-20  M2
+FR-24  M2
+FR-25  M2
+
+# ---- M3 inverted index ----
+FR-01  M3
+FR-02  M3
+FR-10  M3
+FR-11  M3
+FR-12  M3
+FR-13  M3
+FR-14  M3  no roadmap Closes line claims it, batch ingest lands in M3
+FR-16  M3
+FR-17  M3
+FR-21  M3
+
+# ---- M4 prefix and typo ----
+FR-22  M4
+FR-23  M4
+
+# ---- M5 ranking ----
+FR-26  M5
+
+# ---- M6 full API surface ----
+FR-04  M6
+FR-27  M6
+FR-28  M6
+FR-40  M6
+FR-41  M6
+FR-42  M6
+FR-43  M6
+FR-72  M6
+FR-74  M6
+
+# ---- M7 persistence ----
+FR-50  M7
+FR-51  M7
+FR-52  M7
+FR-53  M7
+
+# ---- M8 settings and reindex ----
+FR-03  M8
+FR-44  M8
+FR-45  M8
+
+# ---- M9 operations ----
+FR-61  M9
+FR-62  M9
+FR-63  M9
+FR-65  M9
+FR-66  M9
+
+# ---- M12 packaging ----
+FR-67  M12  image properties are checked by the image job, decide at M12 whether this is untestable
