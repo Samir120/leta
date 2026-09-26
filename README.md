@@ -118,14 +118,14 @@ non-functional, is [`docs/01-requirements.md`](docs/01-requirements.md).
 ## Repository layout
 
 ```
-docs/            specification set, numbered in reading order, plus adr/
-include/leta/    public headers (kept minimal; pimpl)
-src/core/        pure domain — tokenizer, index, postings, ranker, typo automaton. No third-party deps.
+docs/ specification set, numbered in reading order, plus adr/
+include/leta/ public headers (kept minimal; pimpl)
+src/core/ pure domain — tokenizer, index, postings, ranker, typo automaton. No third-party deps.
 src/application/ services orchestrating core; owns the storage and HTTP port interfaces
-src/adapters/    http, storage, config, metrics — replaceable I/O layers
-tests/           unit, integration, contract, recovery, relevance, fuzz, bench, data
-cmake/           build modules, including the configure-time layering check
-scripts/         enforcement run by ctest and CI: requirement coverage, coverage report and gate
+src/adapters/ http, storage, config, metrics — replaceable I/O layers
+tests/ unit, integration, contract, recovery, relevance, fuzz, bench, data
+cmake/ build modules, including the configure-time layering check
+scripts/ enforcement run by ctest and CI: requirement coverage, coverage report and gate
 ```
 
 Dependencies point inward only — `src/core` links nothing but the standard library, and the
@@ -154,6 +154,26 @@ need Clang, and the coverage report (`--target coverage-report`) also needs `llv
 CI runs the same presets with the same commands on exactly those minimum versions — GCC 13 and
 Clang 17 on x86-64 and arm64, and one leg on CMake 3.25 — so code that only a newer toolchain
 accepts fails there rather than for you ([`ci.yml`](.github/workflows/ci.yml)).
+
+### Container image
+
+The deployment artifact is a multi-arch OCI image ([ADR-010](docs/adr/010-linux-container-only.md)).
+The [`Dockerfile`](Dockerfile) is a multi-stage build: a Debian toolchain stage compiles `leta`, a
+distroless glibc runtime stage ships it — non-root, with `/data` declared as the volume for the
+data directory. At this milestone the image can only report its version; `HEALTHCHECK` arrives with
+`/health`.
+
+```bash
+docker build -t leta:dev --build-arg GIT_COMMIT="$(git rev-parse --short=7 HEAD)" .
+docker run --rm leta:dev --version
+```
+
+The build context contains no `.git` ([`.dockerignore`](.dockerignore)), so the commit is passed
+in; without the build arg the version line reads `unknown`. Both architectures build from the same
+file — the non-native one under QEMU, several times slower — with
+`docker buildx build --platform linux/amd64,linux/arm64 .`. The runtime base is an argument
+(`--build-arg RUNTIME_IMAGE=…`) because ADR-010 chooses between distroless and a static Alpine
+build by measurement at M12; the size target is a stretch goal until then.
 
 ## Documentation
 

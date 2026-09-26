@@ -1,0 +1,32 @@
+# Allow-list: the build context is exactly what `cmake --preset release` needs to configure and
+# build the `leta` target, and nothing else. Everything starts excluded; the build inputs are
+# re-included below. A new top-level input the build reads needs a line here — the failure is a
+# clean "No such file" at configure, never a silently fat context (M0-T7).
+#
+# Deliberately out:
+#   .git             the commit reaches the build as --build-arg GIT_COMMIT (Dockerfile). Copying
+#                    history into the builder would ship the whole repo per build for one string
+#   build, data      host artefacts; the image builds from source only
+#   docs, *.md       not build inputs. LICENSE and NOTICE stay in: they belong with the sources,
+#                    and src/core/third_party/README.md carries tl::expected's licence
+#   STATE.md, PROJECT_INSTRUCTIONS.md, .env*, CMakeUserPresets.json — never leave the machine
+
+*
+!CMakeLists.txt
+!CMakePresets.json
+!cmake
+!include
+!src
+!tests
+!LICENSE
+!NOTICE
+
+# tests/ is needed to configure (add_subdirectory), but its data trees are read only by tests
+# that this build never runs. Later rules win over the re-include above.
+tests/data
+tests/fuzz/corpus
+
+# Host junk that a re-included tree may carry
+**/build
+**/.cache
+**/*.swp
