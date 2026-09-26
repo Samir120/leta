@@ -1,4 +1,3 @@
-<!-- CHANGELOG.md — replace the whole file -->
 # Changelog
 
 All notable changes to Leta are recorded here.
@@ -30,6 +29,9 @@ Pre-alpha. `leta --version` is the only runnable behaviour.
 - Requirement-coverage gate: every Must FR has a test tagged with its ID or a tracked line in
   `tests/untested-requirements.txt`, checked by ctest in every preset (NFR-14).
 - Coverage report with an 80 % line-coverage floor on `leta_core` (NFR-14).
+- Container image skeleton: multi-stage `Dockerfile` with a non-root distroless runtime, `/data`
+  declared as the volume, multi-arch build, and `docker run … leta --version` (FR-67 skeleton,
+  NFR-08, ADR-010).
 
 <!--
 Release template — copy for each tag. Delete empty sections.
