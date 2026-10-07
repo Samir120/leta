@@ -2,11 +2,11 @@
 
 #include <exception>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -109,7 +109,12 @@ void ensure_request_id(const httplib::Request& request, httplib::Response& respo
 // pool ADR-003 sized; max_queued_requests stays 0 (unbounded), so a connection beyond the pool
 // waits for a worker instead of being refused.
 void configure_worker_pool(httplib::Server& server, std::size_t worker_threads) {
-    assert(worker_threads > 0 && "HttpServerOptions::worker_threads must be at least 1");
+    // A throw, not an assert: an assert vanishes in Release, and a pool of no threads accepts
+    // connections and never serves them. FR-63 (M9) rejects 0 at config parsing; this is the
+    // backstop for every other way an HttpServerOptions is built.
+    if (worker_threads == 0) {
+        throw std::invalid_argument{"worker_threads must be at least 1"};
+    }
     server.new_task_queue = [worker_threads] {
         // cpp-httplib takes ownership of the pool it is handed; its API leaves no other way.
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)

@@ -148,9 +148,11 @@ TEST_CASE("an unknown route answers 404 with an FR-71 body and a request id", "[
 
 TEST_CASE("an exception in a handler becomes 500 internal without its detail", "[FR-71]") {
     const RunningServer server{[](HttpServer& routes) {
-        routes.add_route(HttpMethod::Get, "/throws", [](const HttpRequest&) -> HttpResponse {
-            throw std::runtime_error{"secret detail"};
-        });
+        routes.add_route(HttpMethod::Get,
+                         "/throws",
+                         [](const HttpRequest& /*request*/) -> HttpResponse {
+                             throw std::runtime_error{"secret detail"};
+                         });
     }};
     auto client = server.client();
     const auto result = client.Get("/throws");
@@ -172,4 +174,10 @@ TEST_CASE("a body over the configured limit is refused with 413 payload_too_larg
     CHECK(
         result->body
         == R"({"code":"payload_too_large","message":"The request exceeds a size limit.","type":"invalid_request"})");
+}
+
+TEST_CASE("a server with no worker threads is refused at construction", "[ADR-003]") {
+    HttpServerOptions options;
+    options.worker_threads = 0;
+    CHECK_THROWS_AS(HttplibServer{options}, std::invalid_argument);
 }

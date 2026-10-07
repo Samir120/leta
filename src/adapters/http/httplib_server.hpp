@@ -18,6 +18,8 @@ namespace leta::http {
 /// ones the library raises before any route runs, carries an FR-71 body.
 class HttplibServer final : public application::HttpServer {
 public:
+    /// Throws std::invalid_argument when options.worker_threads is 0: a pool of no threads accepts
+    /// connections and never serves them. A startup misconfiguration, caught by main (06 §5).
     explicit HttplibServer(const application::HttpServerOptions& options);
     ~HttplibServer() override;
     HttplibServer(const HttplibServer&) = delete;

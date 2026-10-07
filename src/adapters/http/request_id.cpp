@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 
+#include <cstddef>
 #include <cstdint>
 
 namespace leta::http {
@@ -39,7 +40,9 @@ bool is_acceptable_request_id(std::string_view candidate) noexcept {
 
 std::string format_request_id(std::uint64_t high, std::uint64_t low) {
     std::string id;
-    id.reserve(2 * HexDigitsPerWord);
+    // Two words of hex digits. Computed in size_t, the type reserve() takes, so nothing is widened
+    // after the multiplication (bugprone-implicit-widening-of-multiplication-result).
+    id.reserve(std::size_t{2} * HexDigitsPerWord);
     append_hex_word(id, high);
     append_hex_word(id, low);
     return id;
