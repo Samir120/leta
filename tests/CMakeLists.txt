@@ -1,6 +1,6 @@
 # One subdirectory per test layer of 05-quality-strategy.md §2, each its own executable, added
-# when the milestone that needs it arrives: unit since M0-T4; bench behind LETA_BUILD_BENCHMARKS;
-# integration, contract, recovery, relevance and fuzz from M1 onward.
+# when the milestone that needs it arrives: unit since M0-T4, integration since M1-T1, bench behind
+# LETA_BUILD_BENCHMARKS; contract, recovery, relevance and fuzz when their milestones arrive.
 #
 # Also here, because both are about the tests rather than any one layer of them, the two halves of
 # NFR-14 (M0-T6): the requirement-coverage check, a ctest entry that runs in every preset, and the
@@ -14,14 +14,16 @@ set_tests_properties(FR-68.version_line PROPERTIES
     PASS_REGULAR_EXPRESSION
         "^leta [0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)? \\(([0-9a-f]+(-dirty)?|unknown), [A-Za-z]+, [A-Za-z]+ [0-9.]+\\)\n$")
 
-# Exit status 2 and a usage line for any other invocation (A6). WILL_FAIL would accept any
-# non-zero status; the shell wrapper pins the exact one. Linux only, like the rest of the project.
+# Exit status 2 and a usage line for any argument but --version (A6). No arguments starts the
+# server (M1-T1), so the test passes one leta does not know. WILL_FAIL would accept any non-zero
+# status; the shell wrapper pins the exact one. Linux only, like the rest of the project.
 add_test(NAME FR-68.usage_exit_code
-    COMMAND sh -c "\"$1\"; test $? -eq 2" leta-usage "$<TARGET_FILE:leta>")
+    COMMAND sh -c "\"$1\" --bogus; test $? -eq 2" leta-usage "$<TARGET_FILE:leta>")
 set_tests_properties(FR-68.usage_exit_code PROPERTIES
-    PASS_REGULAR_EXPRESSION "usage: leta --version")
+    PASS_REGULAR_EXPRESSION "usage: leta \\[--version\\]")
 
 add_subdirectory(unit)
+add_subdirectory(integration)
 
 if(LETA_BUILD_BENCHMARKS)
     add_subdirectory(bench)
@@ -31,13 +33,13 @@ endif()
 # Every Must FR has a test tagged with its ID, or a line in untested-requirements.txt
 # (scripts/check_requirement_coverage.cmake). A ctest entry rather than a CI job, so it runs in
 # every preset and nothing about it is CI-only. Each Catch2 executable joins
-# LETA_TEST_EXECUTABLES as it arrives (integration and contract from M1), '|'-separated.
+# LETA_TEST_EXECUTABLES as it arrives (contract from M6), '|'-separated.
 
 add_test(NAME NFR-14.requirement_coverage
     COMMAND "${CMAKE_COMMAND}"
         "-DLETA_REQUIREMENTS=${PROJECT_SOURCE_DIR}/docs/01-requirements.md"
         "-DLETA_UNTESTED=${CMAKE_CURRENT_SOURCE_DIR}/untested-requirements.txt"
-        "-DLETA_TEST_EXECUTABLES=$<TARGET_FILE:leta_tests>"
+        "-DLETA_TEST_EXECUTABLES=$<TARGET_FILE:leta_tests>|$<TARGET_FILE:leta_integration_tests>"
         -P "${PROJECT_SOURCE_DIR}/scripts/check_requirement_coverage.cmake")
 
 # ---- NFR-14, line coverage (coverage preset only) -----------------------------------------------

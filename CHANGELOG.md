@@ -11,7 +11,7 @@ Entries reference the requirement IDs they close, e.g. `Prefix matching on the l
 
 ## [Unreleased]
 
-Pre-alpha. `leta --version` is the only runnable behaviour.
+Pre-alpha. `leta` serves `GET /health` on port 7700; nothing else is runnable yet.
 
 ### Added
 - Specification set: project brief, requirements, OpenAPI 3.1 contract and guide, architecture,
@@ -32,6 +32,10 @@ Pre-alpha. `leta --version` is the only runnable behaviour.
 - Container image skeleton: multi-stage `Dockerfile` with a non-root distroless runtime, `/data`
   declared as the volume, multi-arch build, and `docker run … leta --version` (FR-67 skeleton,
   NFR-08, ADR-010).
+- `leta` with no arguments serves HTTP on `0.0.0.0:7700` through cpp-httplib 0.59.0 behind the
+  `HttpServer` port (ADR-003): `GET /health` (FR-60), an FR-71 JSON body on every error the server
+  produces, and `X-Request-Id` on every response, echoed or generated (FR-73). Any other argument
+  than `--version` prints `usage: leta [--version]` and exits 2.
 
 <!--
 Release template — copy for each tag. Delete empty sections.

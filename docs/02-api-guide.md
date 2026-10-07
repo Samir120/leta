@@ -177,9 +177,9 @@ Every error is JSON with a stable `code` you can branch on:
 
 | HTTP | `type` | Typical codes |
 |---|---|---|
-| 400 | `invalid_request` | `invalid_index_uid`, `missing_primary_key`, `unknown_field`, `invalid_search_parameter` |
+| 400 | `invalid_request` | `malformed_request`, `invalid_index_uid`, `missing_primary_key`, `unknown_field`, `invalid_search_parameter` |
 | 401 | `auth` | `missing_authorization`, `invalid_api_key` |
-| 404 | `not_found` | `index_not_found`, `document_not_found` |
+| 404 | `not_found` | `route_not_found`, `index_not_found`, `document_not_found` |
 | 409 | `invalid_request` | `index_already_exists` |
 | 413 | `invalid_request` | `payload_too_large` |
 | 500 | `internal` | `internal` (details in server log, correlated by `X-Request-Id`) |
