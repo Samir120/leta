@@ -14,10 +14,7 @@
 # Blank lines and lines starting with # are ignored. No semicolons in notes.
 
 # ---- M1 walking skeleton ----
-FR-60  M1  M1 claims it as partial (200 when ready); the 503-during-restore half is M7 work
 FR-70  M1
-FR-71  M1
-FR-73  M1
 
 # ---- M2 text pipeline ----
 FR-20  M2

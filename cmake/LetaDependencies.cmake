@@ -27,6 +27,27 @@ set(CPM_USE_LOCAL_PACKAGES OFF)
 # reads the variable itself.
 include(CPM)
 
+# ---- cpp-httplib — the HTTP server behind the HttpServer port (ADR-003). MIT. ------------------
+# Header-only, linked only by leta_adapters (PRIVATE) and the integration tests. Every optional
+# backend is switched off explicitly, because their defaults are ON and would link whatever the
+# host happens to have installed: no TLS (Leta is reached only by the application backend on a
+# private network, 03-architecture.md §1), no compression (not in v1), and no asynchronous
+# resolver (it needs libanl on older glibc, and the server resolves one address, once, at startup).
+CPMAddPackage(
+    NAME httplib
+    VERSION 0.59.0
+    URL https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.59.0.tar.gz
+    URL_HASH SHA256=7c8cc7df044abb837d75f7c1e56333305acb40335c3788b8f5fbf5927e63e148
+    SYSTEM YES
+    OPTIONS
+        "HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF"
+        "HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF"
+        "HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF"
+        "HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF"
+        "HTTPLIB_USE_NON_BLOCKING_GETADDRINFO OFF"
+        "HTTPLIB_COMPILE OFF"
+        "HTTPLIB_INSTALL OFF")
+
 # ---- Catch2 v3 — unit, property and integration tests (ADR-006). BSL-1.0. ----------------------
 CPMAddPackage(
     NAME Catch2

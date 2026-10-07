@@ -9,7 +9,14 @@
 #   ./build/debug/bin/leta_tests --list-tags    # what the coverage check (M0-T6) reads
 
 add_executable(leta_tests
-    adapters/config/build_info_test.cpp)
+    adapters/config/build_info_test.cpp
+    adapters/http/error_response_test.cpp
+    adapters/http/json_string_test.cpp
+    adapters/http/request_id_test.cpp
+    adapters/http/system_routes_test.cpp
+    application/health_service_test.cpp
+    core/error_test.cpp
+    core/result_test.cpp)
 target_link_libraries(leta_tests PRIVATE leta_adapters Catch2::Catch2WithMain)
 leta_enable_diagnostics(leta_tests)
 
