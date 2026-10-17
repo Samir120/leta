@@ -72,7 +72,7 @@ The thinnest end-to-end path, in memory only, with everything hardcoded that can
 - Whitespace-split tokenizer, `std::map<term, vector<DocId>>`, single-term exact match only
 - `X-Request-Id`, structured request logging
 
-**Closes:** FR-70, FR-71, FR-73, FR-60 (partial)
+**Closes:** FR-01, FR-70, FR-71, FR-73; partially FR-02 (create), FR-60 (200 half), FR-72 (create-index body)
 **Exit demo:** create an index, post three documents, search one word, get a hit — over real HTTP.
 **Explicitly throwaway:** the tokenizer and index here are placeholders. Say so in the code.
 
@@ -93,7 +93,7 @@ The thinnest end-to-end path, in memory only, with everything hardcoded that can
 - AND semantics with the partial-match lower tier (FR-21); insertion-order results for empty `q`
 - Batch add, get by key, delete by key, delete all; dotted paths and string arrays (FR-16)
 
-**Closes:** FR-01, FR-02, FR-10 – FR-13, FR-16, FR-17, FR-21
+**Closes:** FR-02 (list, inspect, delete), FR-10 – FR-14, FR-16, FR-17, FR-21
 **Exit demo:** 10 000 real SwadeStack products indexed; multi-word queries return correct sets.
 **Measure here, not later:** resident memory against NFR-04. Discovering a 10× overrun in M11 is expensive.
 
@@ -145,7 +145,7 @@ The technical heart of the project.
 - Manual snapshot endpoint (FR-54); fuzz target on WAL and snapshot readers
 - **Resolve Q5**: measure restore time against NFR-03. If it misses, take ADR-009 alternative A.
 
-**Closes:** FR-50 – FR-55, NFR-03
+**Closes:** FR-50 – FR-55, FR-60 (503 during restore), NFR-03
 **Exit demo:** kill -9 mid-batch, restart, every acknowledged document is present and searchable.
 **→ tag `v0.1.0`.**
 
