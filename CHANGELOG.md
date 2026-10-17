@@ -11,7 +11,8 @@ Entries reference the requirement IDs they close, e.g. `Prefix matching on the l
 
 ## [Unreleased]
 
-Pre-alpha. `leta` serves `GET /health` on port 7700; nothing else is runnable yet.
+Pre-alpha. `leta` serves `GET /health` and `POST /indexes` on port 7700, in memory only; nothing
+survives a restart yet.
 
 ### Added
 - Specification set: project brief, requirements, OpenAPI 3.1 contract and guide, architecture,
@@ -36,6 +37,12 @@ Pre-alpha. `leta` serves `GET /health` on port 7700; nothing else is runnable ye
   `HttpServer` port (ADR-003): `GET /health` (FR-60), an FR-71 JSON body on every error the server
   produces, and `X-Request-Id` on every response, echoed or generated (FR-73). Any other argument
   than `--version` prints `usage: leta [--version]` and exits 2.
+- `POST /indexes` creates an index in memory and answers 201 with its `uid`, `primaryKey`,
+  `createdAt` and `updatedAt`; a taken uid answers 409 `index_already_exists` (FR-01, FR-02 create).
+  Every POST body must be sent as `Content-Type: application/json`, or the request is refused with
+  400 `malformed_request` (FR-70). Unknown body fields are refused with 400 `unknown_field`,
+  naming the field (FR-72, this body). Request bodies are parsed with simdjson 5.0.4, pinned by hash
+  (ADR-004).
 
 <!--
 Release template — copy for each tag. Delete empty sections.

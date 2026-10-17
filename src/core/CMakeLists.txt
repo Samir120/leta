@@ -9,7 +9,11 @@
 add_library(leta_core STATIC
     error.hpp
     error.cpp
-    result.hpp)
+    index_metadata.hpp
+    index_uid.hpp
+    index_uid.cpp
+    result.hpp
+    timestamp.hpp)
 
 # The include root for the whole tree. Project includes are written from src/, so the layer is
 # visible on every include line: "core/result.hpp", "adapters/config/build_info.hpp" (A5).

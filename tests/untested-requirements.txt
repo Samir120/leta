@@ -13,22 +13,17 @@
 # A milestone is not DONE while a line still names it.
 # Blank lines and lines starting with # are ignored. No semicolons in notes.
 
-# ---- M1 walking skeleton ----
-FR-70  M1
-
 # ---- M2 text pipeline ----
 FR-20  M2
 FR-24  M2
 FR-25  M2
 
 # ---- M3 inverted index ----
-FR-01  M3
-FR-02  M3
 FR-10  M3
 FR-11  M3
 FR-12  M3
 FR-13  M3
-FR-14  M3  no roadmap Closes line claims it, batch ingest lands in M3
+FR-14  M3
 FR-16  M3
 FR-17  M3
 FR-21  M3
@@ -48,7 +43,6 @@ FR-40  M6
 FR-41  M6
 FR-42  M6
 FR-43  M6
-FR-72  M6
 FR-74  M6
 
 # ---- M7 persistence ----

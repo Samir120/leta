@@ -14,6 +14,7 @@
 
 #include <httplib.h>
 
+#include "adapters/http/content_type.hpp"
 #include "adapters/http/error_response.hpp"
 #include "adapters/http/request_id.hpp"
 #include "application/http_server.hpp"
@@ -43,13 +44,38 @@ std::string resolve_request_id(const httplib::Request& request) {
     return is_acceptable_request_id(inbound) ? inbound : generate_request_id();
 }
 
+constexpr const char* ContentTypeHeader = "Content-Type";
+
+// Every POST in 02-api-spec.yaml takes a JSON body; GET takes none. POST /snapshots (FR-54, a
+// Should, M6) is the first POST without one, and the rule moves onto the route declaration then.
+bool expects_json_body(HttpMethod method) noexcept {
+    switch (method) {
+        case HttpMethod::Get:
+            return false;
+        case HttpMethod::Post:
+            return true;
+    }
+    std::terminate();
+}
+
+core::Error non_json_body_error() {
+    return {.code = core::ErrorCode::MalformedRequest,
+            .message = "The request body must be JSON, sent with Content-Type: application/json."};
+}
+
 // The id is set before the handler runs, so a handler that throws still leaves it in place for
-// the exception hook to log and for the client to see.
+// the exception hook to log and for the client to see. FR-70 is checked here, once for every route,
+// so that no handler can forget it and none sees the transport's headers.
 httplib::Server::Handler adapt(HttpMethod method, HttpHandler handler) {
     return [method, handler = std::move(handler)](const httplib::Request& request,
                                                   httplib::Response& response) {
         const std::string request_id = resolve_request_id(request);
         response.set_header(RequestIdHeader, request_id);
+        if (expects_json_body(method)
+            && !is_json_content_type(request.get_header_value(ContentTypeHeader))) {
+            write_response(response, error_response(non_json_body_error()));
+            return;
+        }
         const HttpRequest neutral{.method = method,
                                   .path = request.path,
                                   .body = request.body,

@@ -48,6 +48,26 @@ CPMAddPackage(
         "HTTPLIB_COMPILE OFF"
         "HTTPLIB_INSTALL OFF")
 
+# ---- simdjson — every JSON body on the way in (ADR-004). Apache-2.0. ----------------------------
+# A compiled library (one simdjson.cpp with runtime CPU dispatch), linked only by leta_adapters
+# (PRIVATE): no header outside adapters/ shows a simdjson type. First used by M1-T2 for request
+# bodies; ingest (M1-T3, M3) uses the same pin.
+#
+# Error codes only: every call goes through `.get(out)` and checks the error_code (ADR-005), never
+# the throwing conversions. SIMDJSON_EXCEPTIONS is left at its default, because defining it for
+# Leta's targets alone would give the library and Leta two definitions of the same inline functions.
+# Threads off: they serve parse_many, which Leta does not use.
+CPMAddPackage(
+    NAME simdjson
+    VERSION 5.0.4
+    URL https://github.com/simdjson/simdjson/archive/refs/tags/v5.0.4.tar.gz
+    URL_HASH SHA256=827417bcf88309df170962e7bd1b4b4a4992d5d4e5cb82a0442ada9530e916d2
+    SYSTEM YES
+    OPTIONS
+        "SIMDJSON_ENABLE_THREADS OFF"
+        "SIMDJSON_INSTALL OFF"
+        "SIMDJSON_DEVELOPER_MODE OFF")
+
 # ---- Catch2 v3 — unit, property and integration tests (ADR-006). BSL-1.0. ----------------------
 CPMAddPackage(
     NAME Catch2
