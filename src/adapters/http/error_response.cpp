@@ -26,6 +26,12 @@ WireError wire_error(core::ErrorCode code) noexcept {
             return {.code = "malformed_request", .status = 400};
         case core::ErrorCode::PayloadTooLarge:
             return {.code = "payload_too_large", .status = 413};
+        case core::ErrorCode::InvalidIndexUid:
+            return {.code = "invalid_index_uid", .status = 400};
+        case core::ErrorCode::UnknownField:
+            return {.code = "unknown_field", .status = 400};
+        case core::ErrorCode::IndexAlreadyExists:
+            return {.code = "index_already_exists", .status = 409};
         case core::ErrorCode::RouteNotFound:
             return {.code = "route_not_found", .status = 404};
         case core::ErrorCode::Internal:

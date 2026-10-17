@@ -16,6 +16,9 @@ enum class ErrorCode : std::uint8_t {
     // invalid_request
     MalformedRequest,
     PayloadTooLarge,
+    InvalidIndexUid,
+    UnknownField,
+    IndexAlreadyExists,  // 409, not 400: the request is well formed, the name is taken
     // not_found
     RouteNotFound,
     // internal

@@ -4,6 +4,7 @@
 
 add_executable(leta_integration_tests
     http_server_test.cpp
+    index_routes_test.cpp
     running_server.hpp)
 target_link_libraries(leta_integration_tests PRIVATE
     leta_adapters

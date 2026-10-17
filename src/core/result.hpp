@@ -1,3 +1,4 @@
+// src/core/result.hpp
 #pragma once
 
 #include <string>
@@ -19,6 +20,12 @@ using Result = tl::expected<T, E>;
 /// that no call site names tl:: and the C++23 switch stays a one-file edit.
 [[nodiscard]] inline tl::unexpected<Error> failure(ErrorCode code, std::string message) {
     return tl::unexpected<Error>{Error{.code = code, .message = std::move(message)}};
+}
+
+/// The same for an Error that came up from a call below: `if (!added) return
+/// failure(added.error());`
+[[nodiscard]] inline tl::unexpected<Error> failure(Error error) {
+    return tl::unexpected<Error>{std::move(error)};
 }
 
 }  // namespace leta::core

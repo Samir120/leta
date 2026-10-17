@@ -8,6 +8,9 @@ ErrorType error_type(ErrorCode code) noexcept {
     switch (code) {
         case ErrorCode::MalformedRequest:
         case ErrorCode::PayloadTooLarge:
+        case ErrorCode::InvalidIndexUid:
+        case ErrorCode::UnknownField:
+        case ErrorCode::IndexAlreadyExists:
             return ErrorType::InvalidRequest;
         case ErrorCode::RouteNotFound:
             return ErrorType::NotFound;

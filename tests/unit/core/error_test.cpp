@@ -10,9 +10,12 @@ using leta::core::ErrorType;
 
 }  // namespace
 
-TEST_CASE("codes about the shape of a request are invalid_request error", "[FR-71]") {
+TEST_CASE("codes a client fixes by changing its request are invalid_request errors", "[FR-71]") {
     CHECK(error_type(ErrorCode::MalformedRequest) == ErrorType::InvalidRequest);
     CHECK(error_type(ErrorCode::PayloadTooLarge) == ErrorType::InvalidRequest);
+    CHECK(error_type(ErrorCode::InvalidIndexUid) == ErrorType::InvalidRequest);
+    CHECK(error_type(ErrorCode::UnknownField) == ErrorType::InvalidRequest);
+    CHECK(error_type(ErrorCode::IndexAlreadyExists) == ErrorType::InvalidRequest);
 }
 
 TEST_CASE("route_not_found is a not_found error", "[FR-71]") {

@@ -33,6 +33,10 @@ TEST_CASE("an invalid_request error names its type", "[FR-71]") {
 TEST_CASE("each error code has its own HTTP status", "[FR-71]") {
     CHECK(error_response(Error{.code = ErrorCode::MalformedRequest, .message = ""}).status == 400);
     CHECK(error_response(Error{.code = ErrorCode::PayloadTooLarge, .message = ""}).status == 413);
+    CHECK(error_response(Error{.code = ErrorCode::InvalidIndexUid, .message = ""}).status == 400);
+    CHECK(error_response(Error{.code = ErrorCode::UnknownField, .message = ""}).status == 400);
+    CHECK(error_response(Error{.code = ErrorCode::IndexAlreadyExists, .message = ""}).status
+          == 409);
     CHECK(error_response(Error{.code = ErrorCode::Internal, .message = ""}).status == 500);
 }
 
@@ -50,4 +54,13 @@ TEST_CASE("statuses the library sets map to codes a client can branch on", "[FR-
     CHECK(error_for_library_status(431).code == ErrorCode::MalformedRequest);
     CHECK(error_for_library_status(500).code == ErrorCode::Internal);
     CHECK(error_for_library_status(503).code == ErrorCode::Internal);
+}
+
+TEST_CASE("index codes carry the names 02-api-guide.md §6 gives them", "[FR-71]") {
+    CHECK(error_response(Error{.code = ErrorCode::InvalidIndexUid, .message = ""}).body
+          == R"({"code":"invalid_index_uid","message":"","type":"invalid_request"})");
+    CHECK(error_response(Error{.code = ErrorCode::UnknownField, .message = ""}).body
+          == R"({"code":"unknown_field","message":"","type":"invalid_request"})");
+    CHECK(error_response(Error{.code = ErrorCode::IndexAlreadyExists, .message = ""}).body
+          == R"({"code":"index_already_exists","message":"","type":"invalid_request"})");
 }

@@ -2,14 +2,20 @@
 #include <string>
 #include <string_view>
 
+#include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 
 #include "adapters/config/build_info.hpp"
 #include "adapters/http/httplib_server.hpp"
+#include "adapters/http/index_routes.hpp"
 #include "adapters/http/system_routes.hpp"
+#include "adapters/storage/in_memory_index_repository.hpp"
 #include "application/health_service.hpp"
 #include "application/http_server.hpp"
+#include "application/index_service.hpp"
+#include "core/timestamp.hpp"
 
 namespace {
 
@@ -28,11 +34,33 @@ void print_line(std::string_view text) {
     static_cast<void>(std::fputs(line.c_str(), stderr));
 }
 
+void print_listening(std::uint16_t port, std::size_t worker_threads) {
+    std::string listening{"listening on "};
+    listening.append(ListenHost)
+        .append(":")
+        .append(std::to_string(port))
+        .append(" (")
+        .append(std::to_string(worker_threads))
+        .append(" worker threads)");
+    print_line(listening);
+}
+
+// The one place the process reads the wall clock; everything else is handed this function.
+leta::core::Timestamp system_clock_now() {
+    return std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
+}
+
 int serve() {
     const leta::application::HttpServerOptions options{};
     leta::application::HealthService health;
+    // In memory until M7: every index is gone when the process exits.
+    leta::storage::InMemoryIndexRepository indexes;
+    leta::application::IndexService index_service{indexes, system_clock_now};
+    // Declared after everything its routes reference, so it is destroyed, and its workers stopped,
+    // before any of them.
     leta::http::HttplibServer server{options};
     leta::http::register_system_routes(server, health);
+    leta::http::register_index_routes(server, index_service);
 
     const auto bound_port = server.bind(ListenHost, ListenPort);
     if (!bound_port) {
@@ -41,15 +69,7 @@ int serve() {
     }
     // Nothing to restore until M7, so the server is ready as soon as it can accept (FR-60).
     health.mark_available();
-
-    std::string listening{"listening on "};
-    listening.append(ListenHost)
-        .append(":")
-        .append(std::to_string(*bound_port))
-        .append(" (")
-        .append(std::to_string(options.worker_threads))
-        .append(" worker threads)");
-    print_line(listening);
+    print_listening(*bound_port, options.worker_threads);
 
     const auto stopped = server.run();
     if (!stopped) {
