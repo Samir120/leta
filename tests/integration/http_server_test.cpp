@@ -1,23 +1,19 @@
+// tests/integration/http_server_test.cpp  — replace from the top through the first "}  //
+// namespace"
 #include "application/http_server.hpp"
 
-#include <functional>
 #include <stdexcept>
 #include <string>
-#include <thread>
-
-#include <cstdint>
 
 #include <catch2/catch_test_macros.hpp>
 #include <httplib.h>
 
 #include "adapters/http/httplib_server.hpp"
 #include "adapters/http/request_id.hpp"
-#include "adapters/http/system_routes.hpp"
-#include "application/health_service.hpp"
+#include "integration/running_server.hpp"
 
 namespace {
 
-using leta::application::HealthService;
 using leta::application::HttpMethod;
 using leta::application::HttpRequest;
 using leta::application::HttpResponse;
@@ -26,53 +22,7 @@ using leta::application::HttpServerOptions;
 using leta::http::HttplibServer;
 using leta::http::is_acceptable_request_id;
 using leta::http::RequestIdHeader;
-
-using AddRoutes = std::function<void(HttpServer&)>;
-
-constexpr const char* Loopback = "127.0.0.1";
-
-std::uint16_t start_listening(HttplibServer& server,
-                              HealthService& health,
-                              const AddRoutes& add_routes) {
-    health.mark_available();
-    leta::http::register_system_routes(server, health);
-    if (add_routes) {
-        add_routes(server);
-    }
-    return server.bind(Loopback, 0).value();
-}
-
-// A real server on an ephemeral loopback port, serving on its own thread for the life of one test.
-// runner_ is declared last, so the thread starts only once everything it touches exists.
-class RunningServer {
-public:
-    explicit RunningServer(const AddRoutes& add_routes = {}, const HttpServerOptions& options = {})
-        : server_{options}
-        , port_{start_listening(server_, health_, add_routes)}
-        ,
-        // A failure to serve shows up as the test's own request failing.
-        runner_{[this] { static_cast<void>(server_.run()); }} {}
-
-    ~RunningServer() {
-        server_.stop();
-        runner_.join();
-    }
-
-    RunningServer(const RunningServer&) = delete;
-    RunningServer& operator=(const RunningServer&) = delete;
-    RunningServer(RunningServer&&) = delete;
-    RunningServer& operator=(RunningServer&&) = delete;
-
-    [[nodiscard]] httplib::Client client() const {
-        return httplib::Client{Loopback, port_};
-    }
-
-private:
-    HealthService health_;
-    HttplibServer server_;
-    std::uint16_t port_;
-    std::thread runner_;
-};
+using leta::testing::RunningServer;
 
 void add_echo_route(HttpServer& routes) {
     routes.add_route(HttpMethod::Post, "/echo", [](const HttpRequest& request) {
