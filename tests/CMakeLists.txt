@@ -1,6 +1,7 @@
 # One subdirectory per test layer of 05-quality-strategy.md §2, each its own executable, added
-# when the milestone that needs it arrives: unit since M0-T4, integration since M1-T1, bench behind
-# LETA_BUILD_BENCHMARKS; contract, recovery, relevance and fuzz when their milestones arrive.
+# when the milestone that needs it arrives: unit since M0-T4, integration since M1-T1, fuzz since
+# M1-T3 (fuzz preset only), bench behind LETA_BUILD_BENCHMARKS; contract, recovery and relevance
+# when their milestones arrive.
 #
 # Also here, because both are about the tests rather than any one layer of them, the two halves of
 # NFR-14 (M0-T6): the requirement-coverage check, a ctest entry that runs in every preset, and the
@@ -25,6 +26,11 @@ set_tests_properties(FR-68.usage_exit_code PROPERTIES
 add_subdirectory(unit)
 add_subdirectory(integration)
 
+# libFuzzer targets need the fuzz preset's instrumentation, and so Clang (NFR-07).
+if(LETA_INSTRUMENTATION STREQUAL "fuzz")
+    add_subdirectory(fuzz)
+endif()
+
 if(LETA_BUILD_BENCHMARKS)
     add_subdirectory(bench)
 endif()
@@ -33,7 +39,8 @@ endif()
 # Every Must FR has a test tagged with its ID, or a line in untested-requirements.txt
 # (scripts/check_requirement_coverage.cmake). A ctest entry rather than a CI job, so it runs in
 # every preset and nothing about it is CI-only. Each Catch2 executable joins
-# LETA_TEST_EXECUTABLES as it arrives (contract from M6), '|'-separated.
+# LETA_TEST_EXECUTABLES as it arrives (contract from M6), '|'-separated. Fuzz targets are not
+# Catch2 executables and do not join it.
 
 add_test(NAME NFR-14.requirement_coverage
     COMMAND "${CMAKE_COMMAND}"

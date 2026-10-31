@@ -1,0 +1,6 @@
+POST /indexes HTTP/1.1
+Host: leta
+Content-Type: application/json
+Content-Length: 18
+
+{"uid":"products"}
