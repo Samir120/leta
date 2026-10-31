@@ -79,8 +79,9 @@ TEST_CASE("a handler sees the body and the same request id the client gets", "[F
     const std::string body = R"({"q":"skärm"})";
     const auto result = client.Post("/echo", body, "application/json");
     REQUIRE(result);
-    const std::string id = result->get_header_value(RequestIdHeader);
-    CHECK(result->body == id + " " + body);
+    std::string expected = result->get_header_value(RequestIdHeader);
+    expected.append(" ").append(body);
+    CHECK(result->body == expected);
 }
 
 TEST_CASE("an unknown route answers 404 with an FR-71 body and a request id", "[FR-71]") {
