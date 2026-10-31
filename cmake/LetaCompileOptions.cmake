@@ -35,6 +35,21 @@ set(_leta_gnu_only_warnings
     -Wduplicated-branches
     -Wlogical-op)
 
+# GCC 16 raises two false positives in headers we do not own when it builds the -O1 sanitizer
+# presets (cmake/LetaInstrumentation.cmake), in every translation unit that includes httplib.h:
+#   -Wmaybe-uninitialized  libstdc++'s <regex>, a std::function moved inside std::regex
+#                          (asan-ubsan; the warning of GCC PR 105562)
+#   -Wnull-dereference     std::string::size() under httplib's case-insensitive header lookup
+#                          (tsan)
+# Both come from flow analysis that the instrumentation perturbs. Off only there: GCC 13 (the CI
+# floor), Clang, and every uninstrumented build keep both checks. Remove when a GCC release stops
+# raising them; the gate's version is the first one seen to.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+   AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16
+   AND LETA_INSTRUMENTATION MATCHES "^(asan-ubsan|tsan)$")
+    list(APPEND _leta_gnu_only_warnings -Wno-maybe-uninitialized -Wno-null-dereference)
+endif()
+
 target_compile_options(leta_compile_options INTERFACE
     ${_leta_warnings}
     "$<$<CXX_COMPILER_ID:GNU>:${_leta_gnu_only_warnings}>"
