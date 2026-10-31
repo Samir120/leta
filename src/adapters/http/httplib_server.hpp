@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <string_view>
 
 #include <cstdint>
@@ -34,6 +35,12 @@ public:
                                                    std::uint16_t port) override;
     [[nodiscard]] core::Result<void> run() override;
     void stop() noexcept override;
+
+    /// Serves one request given as raw bytes, as if read from a connection, and returns the raw
+    /// response bytes: the library's parser, the routes and every hook above them, with no socket
+    /// and no worker thread. For the HTTP fuzz target (NFR-07) and transport tests. Not part of the
+    /// port, and not to be called while run() is serving.
+    [[nodiscard]] std::string serve_raw(std::string_view request_bytes);
 
 private:
     struct Impl;

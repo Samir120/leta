@@ -130,17 +130,24 @@ Sanitizer builds use the glibc-based CI image regardless of the runtime layer ch
 
 Every boundary that consumes bytes from outside the process gets a libFuzzer target (NFR-07):
 
-| Target | Input |
-|---|---|
-| `fuzz_http_request` | Raw request bytes |
-| `fuzz_json_ingest` | Document batch bodies |
-| `fuzz_search_params` | Search request bodies |
-| `fuzz_settings` | Settings patch bodies |
-| `fuzz_wal_replay` | WAL file bytes |
-| `fuzz_snapshot_read` | Snapshot file bytes |
+| Target | Input | Since |
+|---|---|---|
+| `fuzz_http_request` | Raw request bytes, through the whole transport | M1 |
+| `fuzz_json_ingest` | Document batch bodies; checks that kept documents read back unchanged | M1 |
+| `fuzz_create_index` | Create-index bodies | M1 |
+| `fuzz_search_params` | Search request bodies | |
+| `fuzz_settings` | Settings patch bodies | |
+| `fuzz_wal_replay` | WAL file bytes | |
+| `fuzz_snapshot_read` | Snapshot file bytes | |
 
 The last two matter more than they look: they are the path that runs at startup on files that may
 have been truncated by a crash, and a hang or a crash there means a server that will not boot.
+
+Targets live in `tests/fuzz/`, one `<target>.cpp` and one `corpus/<target>/` of seeds each, and are
+built in the `fuzz` preset only. Every `ctest --preset fuzz` — and so every PR, on the fuzz leg —
+replays each committed corpus once and fuzzes each target for 20 s; new inputs and crash files land
+in the build tree. A target keeps no state between inputs: libFuzzer assumes each run depends on its
+input alone, and a crash that depends on earlier inputs cannot be reproduced from its file.
 
 Corpora are committed and grow from crashes found. Every crash becomes a permanent regression test
 with the crashing input as a fixture. Targets run one hour each nightly and on release branches; a

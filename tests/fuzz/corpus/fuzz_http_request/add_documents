@@ -1,0 +1,6 @@
+POST /indexes/products/documents HTTP/1.1
+Host: leta
+Content-Type: application/json
+Content-Length: 32
+
+[{"id":1,"name":"Corsair DDR5"}]

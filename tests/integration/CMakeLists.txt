@@ -3,6 +3,7 @@
 # endpoint group; the server runs in-process on its own thread (running_server.hpp).
 
 add_executable(leta_integration_tests
+    document_routes_test.cpp
     http_server_test.cpp
     index_routes_test.cpp
     running_server.hpp)

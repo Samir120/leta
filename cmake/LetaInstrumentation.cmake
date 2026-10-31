@@ -52,8 +52,8 @@ elseif(LETA_INSTRUMENTATION STREQUAL "coverage")
 
 elseif(LETA_INSTRUMENTATION STREQUAL "fuzz")
     _leta_require_clang(fuzz "libFuzzer")
-    # fuzzer-no-link instruments everything without supplying main(). Each fuzz executable adds
-    # -fsanitize=fuzzer itself when the targets exist (M2 onward, NFR-07).
+    # fuzzer-no-link instruments everything without supplying main(). Each fuzz executable links
+    # with -fsanitize=fuzzer, which adds libFuzzer's main() (tests/fuzz/CMakeLists.txt, NFR-07).
     add_compile_options(-O1 -fsanitize=address,undefined,fuzzer-no-link -fno-sanitize-recover=all)
     add_link_options(-fsanitize=address,undefined)
 endif()

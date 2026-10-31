@@ -3,9 +3,11 @@
 # Tighten over time by deleting exclusions, never by adding NOLINT in code without a comment.
 # Requires clang-tidy ≥ 17.
 #
-# Run locally:   clang-tidy -p build/debug src/core/tokenizer.cpp
-# As part of a build (what CI does):
-#                cmake --preset debug -DLETA_CLANG_TIDY=ON && cmake --build --preset debug
+# Run locally, on a Clang build as CI's tidy leg is. A GCC build's compile commands carry GCC-only
+# warning flags (-Wlogical-op, -Wduplicated-cond …) that clang-tidy rejects as unknown options:
+#                CC=clang CXX=clang++ cmake --preset debug -B build/tidy -DLETA_CLANG_TIDY=ON
+#                cmake --build build/tidy -- -k 0
+# One file:      clang-tidy -p build/tidy src/core/tokenizer.cpp
 #
 # Third-party code is never linted, and that is not done here: the vendored headers under
 # src/core/third_party and every CPM-fetched dependency are SYSTEM include directories, and
@@ -81,6 +83,12 @@
 #   readability-else-after-return
 #       `else` after `return` is often clearer for early-exit chains.
 #
+#   readability-trailing-comma
+#       Wants a trailing comma in every multi-line braced initializer. How those lists break is
+#       .clang-format's decision, and a trailing comma overrides it (one element per line). New in
+#       clang-tidy 23 (the tidy-22 sweep of M1-T2 did not raise it); older versions ignore the
+#       entry.
+#
 #   misc-include-cleaner
 #       Fires on every header not yet included by a .cpp — i.e. all of them during
 #       bring-up. Re-enable once M1 lands.
@@ -125,6 +133,7 @@ Checks: >
   -readability-function-size,
   -hicpp-function-size,
   -readability-else-after-return,
+  -readability-trailing-comma,
   -misc-include-cleaner,
   -cert-err58-cpp,
   -portability-avoid-pragma-once
@@ -195,11 +204,15 @@ CheckOptions:
   - { key: readability-function-cognitive-complexity.Threshold,    value: 15   }
   - { key: readability-function-cognitive-complexity.IgnoreMacros, value: true }
 
+  # --- moves ---
+  # simdjson 5.0.4's simdjson_result::get() is &&-qualified (A18), so a named result is read as
+  # `std::move(element_result).get(element)`. clang-tidy 17 calls that move "no effect" when the
+  # result is trivially copyable (simdjson_result<value>), though it selects the only get() there
+  # is; clang-tidy 23 does not. Off for that half only: std::move of a const argument is still
+  # reported. hicpp-move-const-arg is an alias and reads its own key.
+  - { key: performance-move-const-arg.CheckTriviallyCopyableMove,  value: false }
+  - { key: hicpp-move-const-arg.CheckTriviallyCopyableMove,        value: false }
+
   # --- modernize ---
   - { key: modernize-use-auto.MinTypeNameLength,                   value: 8          }
   - { key: modernize-use-default-member-init.UseAssignment,        value: false      }
-  - { key: modernize-loop-convert.MinConfidence,                   value: reasonable }
-
-  # --- performance ---
-  - { key: performance-move-const-arg.CheckTriviallyCopyableMove,  value: false }
-  - { key: performance-unnecessary-value-param.AllowedTypes,       value: 'std::string_view;std::span' }

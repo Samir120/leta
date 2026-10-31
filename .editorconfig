@@ -64,3 +64,13 @@ indent_style = tab
 [*.md]
 trim_trailing_whitespace = false
 indent_size = 2
+
+# ---------------------------------------------------------------------------
+# Fuzz corpora — opaque bytes, binary in .gitattributes too. An editor must not
+# add a final newline, trim whitespace or convert CRLF in a seed.
+# ---------------------------------------------------------------------------
+[tests/fuzz/corpus/**]
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+charset = unset
