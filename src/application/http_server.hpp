@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <functional>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -18,14 +20,30 @@ enum class HttpMethod : std::uint8_t {
     Post,
 };
 
+/// One `{name}` segment of a route and the text that filled it in this request.
+struct PathParameter {
+    std::string_view name;
+    std::string_view value;
+};
+
 /// One request as a handler sees it. Every view points into the transport's own buffers and is
 /// valid only until the handler returns: copy whatever must outlive the call (06 §3).
 struct HttpRequest {
     HttpMethod method{HttpMethod::Get};
     std::string_view path;
+    std::span<const PathParameter> path_parameters;  // one per `{name}` in the route, any order
     std::string_view body;
     std::string_view request_id;  // FR-73: the same value the response's X-Request-Id carries
 };
+
+/// The text that filled the route's `{name}` segment. Empty when the route declares no such
+/// segment, which is a mistake in the route: its own tests catch it, because every request then
+/// looks like one with an empty segment.
+[[nodiscard]] inline std::string_view path_parameter(const HttpRequest& request,
+                                                     std::string_view name) noexcept {
+    const auto found = std::ranges::find(request.path_parameters, name, &PathParameter::name);
+    return found == request.path_parameters.end() ? std::string_view{} : found->value;
+}
 
 /// One response. The status is chosen only by code under adapters/http, the single layer that
 /// knows what a status code is (ADR-005); application services return Results, never responses.
@@ -61,8 +79,10 @@ public:
     HttpServer& operator=(HttpServer&&) = delete;
     virtual ~HttpServer() = default;
 
-    /// `path` is matched exactly; parameterised paths arrive with the first route that needs one
-    /// (M1-T3). Not thread-safe: call before run().
+    /// `path` is matched exactly, except that a segment written `{name}` — the syntax of
+    /// 02-api-spec.yaml — matches any one segment, which the handler reads with
+    /// path_parameter(request, "name"). No library's pattern syntax reaches this layer.
+    /// Not thread-safe: call before run().
     virtual void add_route(HttpMethod method, std::string_view path, HttpHandler handler) = 0;
 
     /// Opens the listening socket. Port 0 asks the kernel for a free one; the result is the port
