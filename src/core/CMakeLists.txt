@@ -7,13 +7,19 @@
 # coverage-report target measures these sources against the 80 % floor (NFR-14, A13).
 
 add_library(leta_core STATIC
+    doc_id.hpp
+    document.hpp
     error.hpp
     error.cpp
+    exact_match_index.hpp
+    exact_match_index.cpp
     index_metadata.hpp
     index_uid.hpp
     index_uid.cpp
     result.hpp
-    timestamp.hpp)
+    timestamp.hpp
+    whitespace_tokenizer.hpp
+    whitespace_tokenizer.cpp)
 
 # The include root for the whole tree. Project includes are written from src/, so the layer is
 # visible on every include line: "core/result.hpp", "adapters/config/build_info.hpp" (A5).

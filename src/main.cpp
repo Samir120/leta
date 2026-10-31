@@ -8,6 +8,7 @@
 #include <cstdio>
 
 #include "adapters/config/build_info.hpp"
+#include "adapters/http/document_routes.hpp"
 #include "adapters/http/httplib_server.hpp"
 #include "adapters/http/index_routes.hpp"
 #include "adapters/http/system_routes.hpp"
@@ -15,6 +16,7 @@
 #include "application/health_service.hpp"
 #include "application/http_server.hpp"
 #include "application/index_service.hpp"
+#include "application/ingest_service.hpp"
 #include "core/timestamp.hpp"
 
 namespace {
@@ -53,14 +55,16 @@ leta::core::Timestamp system_clock_now() {
 int serve() {
     const leta::application::HttpServerOptions options{};
     leta::application::HealthService health;
-    // In memory until M7: every index is gone when the process exits.
+    // In memory until M7: every index and document is gone when the process exits.
     leta::storage::InMemoryIndexRepository indexes;
     leta::application::IndexService index_service{indexes, system_clock_now};
+    leta::application::IngestService ingest_service{indexes, system_clock_now};
     // Declared after everything its routes reference, so it is destroyed, and its workers stopped,
     // before any of them.
     leta::http::HttplibServer server{options};
     leta::http::register_system_routes(server, health);
     leta::http::register_index_routes(server, index_service);
+    leta::http::register_document_routes(server, ingest_service);
 
     const auto bound_port = server.bind(ListenHost, ListenPort);
     if (!bound_port) {

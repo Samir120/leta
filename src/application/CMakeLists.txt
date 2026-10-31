@@ -10,6 +10,8 @@ add_library(leta_application STATIC
     http_server.hpp
     index_repository.hpp
     index_service.hpp
-    index_service.cpp)
+    index_service.cpp
+    ingest_service.hpp
+    ingest_service.cpp)
 target_link_libraries(leta_application PUBLIC leta_core)
 leta_enable_diagnostics(leta_application)

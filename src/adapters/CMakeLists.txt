@@ -15,6 +15,8 @@ add_library(leta_adapters STATIC
     "${CMAKE_CURRENT_BINARY_DIR}/config/build_info_generated.cpp"
     http/content_type.hpp
     http/content_type.cpp
+    http/document_routes.hpp
+    http/document_routes.cpp
     http/error_response.hpp
     http/error_response.cpp
     http/httplib_server.hpp
@@ -36,6 +38,6 @@ target_link_libraries(leta_adapters
     # PRIVATE: only httplib_server.cpp includes httplib.h. Nothing that includes an adapters header
     # sees an httplib type (ADR-003); the integration tests link it themselves for the client.
     PRIVATE httplib::httplib
-    # PRIVATE likewise: only index_routes.cpp includes simdjson.h (ADR-004).
+    # PRIVATE likewise: only index_routes.cpp and document_routes.cpp include simdjson.h (ADR-004).
     simdjson::simdjson)
 leta_enable_diagnostics(leta_adapters)

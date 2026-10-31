@@ -11,7 +11,9 @@
 add_executable(leta_tests
     adapters/config/build_info_test.cpp
     adapters/http/content_type_test.cpp
+    adapters/http/document_routes_test.cpp
     adapters/http/error_response_test.cpp
+    adapters/http/httplib_server_test.cpp
     adapters/http/index_routes_test.cpp
     adapters/http/json_string_test.cpp
     adapters/http/json_timestamp_test.cpp
@@ -20,9 +22,12 @@ add_executable(leta_tests
     adapters/storage/in_memory_index_repository_test.cpp
     application/health_service_test.cpp
     application/index_service_test.cpp
+    application/ingest_service_test.cpp
     core/error_test.cpp
+    core/exact_match_index_test.cpp
     core/index_uid_test.cpp
-    core/result_test.cpp)
+    core/result_test.cpp
+    core/whitespace_tokenizer_test.cpp)
 target_link_libraries(leta_tests PRIVATE leta_adapters Catch2::Catch2WithMain)
 leta_enable_diagnostics(leta_tests)
 
